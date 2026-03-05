@@ -1,5 +1,8 @@
 notebooks/R/
-!**/temp_dbf/
-!**/temp_dbf/**
 .venv/
 venv/
+.venv*/
+**/temp_dbf/
+**/__pycache__/
+*.py[cod]
+*$py.class

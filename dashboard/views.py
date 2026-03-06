@@ -6,7 +6,10 @@ from scipy.stats import chi2_contingency
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
-from prophet import Prophet
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+import matplotlib.pyplot as plt
+import math
 from config import COLORS
 from components import format_fig
 
@@ -169,22 +172,176 @@ def render_ia(filtered_df):
             st.plotly_chart(format_fig(fig_rf, legend_horiz=False), use_container_width=True)
             
     st.divider()
-    st.markdown("**Projeção de Longo Prazo (Prophet)**")
-    if st.button("Executar Inferência Temporal Larga (24 meses)", type="primary"):
-        with st.spinner("Treinando algoritmos Prophet..."):
-            ts_prophet = filtered_df.resample("ME", on="dt_notific").size().reset_index(name="casos")
-            ts_prophet = ts_prophet.rename(columns={"dt_notific": "ds", "casos": "y"})
-            model = Prophet(yearly_seasonality=True)
-            model.fit(ts_prophet)
-            future = model.make_future_dataframe(periods=24, freq="ME")
-            forecast = model.predict(future)
+    st.markdown("**Projeção de Longo Prazo (Prophet & RandomForest)**")
+    if st.button("Executar Inferência Temporal Larga (Dez/2027)", type="primary"):
+        with st.spinner("Treinando algoritmos (Prophet & RandomForest)..."):
+            import warnings; warnings.filterwarnings('ignore')
             
-            fig_fc = go.Figure()
-            fig_fc.add_trace(go.Scatter(x=ts_prophet["ds"], y=ts_prophet["y"], mode='markers+lines', name="Dados Históricos", line=dict(color=COLORS["secondary"], width=2)))
-            fig_fc.add_trace(go.Scatter(x=forecast["ds"], y=forecast["yhat"], name="Modelo Preditivo", line=dict(color=COLORS["accent"], dash="dash", width=3)))
-            fig_fc.add_trace(go.Scatter(x=forecast["ds"], y=forecast["yhat_upper"], line=dict(width=0), showlegend=False))
-            fig_fc.add_trace(go.Scatter(x=forecast["ds"], y=forecast["yhat_lower"], fill='tonexty', fillcolor='rgba(49, 130, 206, 0.2)', line=dict(width=0), name="Interv. Confiança"))
-            st.plotly_chart(format_fig(fig_fc), use_container_width=True)
+            # ── 1. Série temporal mensal completa ────────────────────────────────────────
+            ts = filtered_df.resample('ME', on='dt_notific').size().reset_index()
+            ts.columns = ['ds', 'y']
+            ts = ts.sort_values('ds').reset_index(drop=True)
+
+            BACKTEST_MONTHS = 12
+            END_PROJ       = pd.Timestamp('2027-12-31')
+
+            train = ts.iloc[:-BACKTEST_MONTHS].copy()
+            test  = ts.iloc[-BACKTEST_MONTHS:].copy()
+
+            # ── 2. Número de meses de projeção futura (depois do teste) ──────────────────
+            last_real_date = ts['ds'].max()
+            n_future = (END_PROJ.year - last_real_date.year) * 12 + (END_PROJ.month - last_real_date.month)
+
+            # ── 3. PROPHET (ou Holt-Winters como fallback) ────────────────────────────────
+            PROPHET_AVAILABLE = True
+            try:
+                from prophet import Prophet
+                m_p = Prophet(yearly_seasonality=True, changepoint_prior_scale=0.1)
+                m_p.fit(train[['ds', 'y']])
+                future_full = m_p.make_future_dataframe(periods=BACKTEST_MONTHS + n_future, freq='ME')
+                fc_p = m_p.predict(future_full)
+                prophet_test_pred  = fc_p[fc_p['ds'].isin(test['ds'])]['yhat'].values
+                prophet_future     = fc_p[fc_p['ds'] > last_real_date][['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
+                model_name_prophet = 'Prophet'
+            except Exception as e:
+                PROPHET_AVAILABLE = False
+                st.warning(f'Prophet falhou: {e}. Usando Holt-Winters como fallback.')
+
+            if not PROPHET_AVAILABLE:
+                hw = ExponentialSmoothing(train['y'], seasonal_periods=12, trend='add', seasonal='add').fit()
+                hw_all  = hw.forecast(BACKTEST_MONTHS + n_future)
+                prophet_test_pred  = hw_all.values[:BACKTEST_MONTHS]
+                future_dates_hw    = pd.date_range(last_real_date + pd.DateOffset(months=1), periods=n_future, freq='ME')
+                std_hw             = train['y'].std()
+                prophet_future = pd.DataFrame({
+                    'ds': future_dates_hw,
+                    'yhat': hw_all.values[BACKTEST_MONTHS:],
+                    'yhat_lower': hw_all.values[BACKTEST_MONTHS:] - 1.5*std_hw,
+                    'yhat_upper': hw_all.values[BACKTEST_MONTHS:] + 1.5*std_hw,
+                })
+                model_name_prophet = 'Holt-Winters'
+
+            # ── 4. RANDOM FOREST ──────────────────────────────────────────────────────────
+            def make_rf_features(s):
+                s = s.copy()
+                s['month'] = s['ds'].dt.month
+                s['year']  = s['ds'].dt.year
+                s['t']     = range(len(s))
+                for lag in [1, 2, 3, 6, 12]:
+                    if len(s) > lag:
+                        s[f'lag_{lag}'] = s['y'].shift(lag)
+                return s.dropna()
+
+            train_feat = make_rf_features(train)
+            X_cols = ['month', 'year', 't', 'lag_1', 'lag_2', 'lag_3', 'lag_6', 'lag_12']
+            rf = RandomForestRegressor(n_estimators=200, random_state=42)
+            rf.fit(train_feat[X_cols], train_feat['y'])
+
+            # Previsão walkforward para o período de teste
+            ts_extended = ts.copy()
+            rf_test_pred = []
+            for i in range(BACKTEST_MONTHS):
+                row = ts_extended.iloc[-(BACKTEST_MONTHS - i)]
+                feats = {
+                    'month': row['ds'].month, 'year': row['ds'].year,
+                    't': len(train) + i,
+                    'lag_1':  ts_extended['y'].iloc[-(BACKTEST_MONTHS - i) - 1],
+                    'lag_2':  ts_extended['y'].iloc[-(BACKTEST_MONTHS - i) - 2],
+                    'lag_3':  ts_extended['y'].iloc[-(BACKTEST_MONTHS - i) - 3],
+                    'lag_6':  ts_extended['y'].iloc[-(BACKTEST_MONTHS - i) - 6],
+                    'lag_12': ts_extended['y'].iloc[-(BACKTEST_MONTHS - i) - 12],
+                }
+                pred = rf.predict(pd.DataFrame([feats]))[0]
+                rf_test_pred.append(pred)
+
+            # Projeção futura walkforward RF
+            future_dates = pd.date_range(last_real_date + pd.DateOffset(months=1), periods=n_future, freq='ME')
+            ts_proj = ts.copy()
+            rf_future_pred = []
+            for j, fd in enumerate(future_dates):
+                feats = {
+                    'month': fd.month, 'year': fd.year,
+                    't': len(ts) + j,
+                    'lag_1':  ts_proj['y'].iloc[-1],
+                    'lag_2':  ts_proj['y'].iloc[-2],
+                    'lag_3':  ts_proj['y'].iloc[-3],
+                    'lag_6':  ts_proj['y'].iloc[-6],
+                    'lag_12': ts_proj['y'].iloc[-12] if len(ts_proj) >= 12 else ts_proj['y'].mean(),
+                }
+                pred = rf.predict(pd.DataFrame([feats]))[0]
+                rf_future_pred.append(pred)
+                ts_proj = pd.concat([ts_proj, pd.DataFrame({'ds': [fd], 'y': [pred]})], ignore_index=True)
+
+            rf_future_df = pd.DataFrame({'ds': future_dates, 'yhat': rf_future_pred})
+
+            # ── 5. Métricas ───────────────────────────────────────────────────────────────
+            mae_p  = mean_absolute_error(test['y'], prophet_test_pred)
+            rmse_p = math.sqrt(mean_squared_error(test['y'], prophet_test_pred))
+            mae_rf = mean_absolute_error(test['y'], rf_test_pred)
+            rmse_rf = math.sqrt(mean_squared_error(test['y'], rf_test_pred))
+
+            # ── 6. GRÁFICO (Matplotlib no Streamlit) ──────────────────────────────────────
+            fig, ax = plt.subplots(figsize=(12, 6))
+
+            # Histórico (treino)
+            ax.plot(train['ds'], train['y'], color='steelblue', linewidth=2, label='Histórico (treino)')
+
+            # Real (teste)
+            ax.plot(test['ds'], test['y'], color='black', linewidth=2.5, linestyle='--', marker='o', markersize=4, label='Real (backtest)')
+
+            # Previsão backtesting - Prophet/HW
+            ax.plot(test['ds'], prophet_test_pred, color='darkorange', linewidth=2, linestyle='-.', marker='s', markersize=4,
+                    label=f'{model_name_prophet} backtest (MAE={mae_p:.1f})')
+
+            # Previsão backtesting - RF
+            ax.plot(test['ds'], rf_test_pred, color='green', linewidth=2, linestyle=':', marker='^', markersize=4,
+                    label=f'RandomForest backtest (MAE={mae_rf:.1f})')
+
+            # Projeção futura - Prophet/HW (com IC)
+            ax.plot(prophet_future['ds'], prophet_future['yhat'], color='darkorange', linewidth=2.5, linestyle='-',
+                    label=f'{model_name_prophet} → Dez/2027')
+            ax.fill_between(prophet_future['ds'], prophet_future['yhat_lower'], prophet_future['yhat_upper'],
+                            alpha=0.15, color='darkorange', label='IC ' + model_name_prophet)
+
+            # Projeção futura - RF
+            ax.plot(rf_future_df['ds'], rf_future_df['yhat'], color='green', linewidth=2.5, linestyle='-',
+                    label='RandomForest → Dez/2027')
+
+            ax.axvline(x=train['ds'].max(), color='gray', linestyle=':', linewidth=1.5, alpha=0.8)
+            ax.axvline(x=last_real_date, color='dimgray', linestyle='--', linewidth=1.5, alpha=0.8)
+            
+            ax.set_title('Início Backtesting e Projeção até Dez/2027', fontsize=12, fontweight='bold')
+            ax.legend(loc='upper left', fontsize=8, framealpha=0.9)
+            ax.grid(axis='y', alpha=0.3)
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
+
+            # Exibição de Métricas e Tabela
+            m1, m2 = st.columns(2)
+            with m1:
+                st.metric(f"MAE {model_name_prophet}", f"{mae_p:.1f}")
+                st.metric(f"RMSE {model_name_prophet}", f"{rmse_p:.1f}")
+            with m2:
+                st.metric("MAE RandomForest", f"{mae_rf:.1f}")
+                st.metric("RMSE RandomForest", f"{rmse_rf:.1f}")
+
+            st.markdown("### Projeção até Dez/2027")
+            proj_df = prophet_future[['ds','yhat']].rename(columns={'yhat': model_name_prophet})
+            proj_df['RandomForest'] = rf_future_df['yhat'].values
+            proj_df['ds'] = proj_df['ds'].dt.strftime('%b/%Y')
+            st.dataframe(proj_df, use_container_width=True)
+
+            # ── 7. EXPLICAÇÃO DO MODELO ─────────────────────────────────────────────
+            st.info("""
+            **Guia Rápido dos Resultados:**
+            *   **Histórico (Treino):** Dados reais usados para ensinar os modelos.
+            *   **Real (Backtest):** Dados reais ocultados do treino para testar a precisão.
+            *   **Modelos (Prophet/RandomForest):** Algoritmos que preveem tendências futuras.
+            *   **IC (Intervalo de Confiança):** Margem de erro esperada (área sombreada).
+            *   **Métricas de Performance:**
+                *   **MAE (Erro Médio Absoluto):** Em média, quantas notificações erramos (quanto menor, melhor).
+                *   **RMSE (Raiz do Erro Quadrático Médio):** Similar ao MAE, mas penaliza mais erros grandes, detectando picos atípicos.
+            """)
 
 def render_matriz(filtered_df):
     st.markdown("### Matriz Exploratória (Data Mining)")

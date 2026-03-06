@@ -31,13 +31,13 @@ def render_temporal(filtered_df):
         fig_line = go.Figure()
         fig_line.add_trace(go.Scatter(
             x=ts['dt_notific'], y=ts['casos'], mode='lines', fill='tozeroy',
-            line=dict(width=3, color=COLORS['primary'], shape='spline', smoothing=1.3),
+            line=dict(width=3, color=COLORS['primary']),
             fillcolor='rgba(26, 54, 93, 0.1)', name="Casos Mensais"
         ))
         
         fig_line.add_trace(go.Scatter(
             x=ts['dt_notific'], y=ts['Tendencia_MA6'], mode='lines',
-            line=dict(width=2.5, color=COLORS['warning'], dash='dash', shape='spline', smoothing=1.3),
+            line=dict(width=2.5, color=COLORS['warning'], dash='dash'),
             name="Tendência (Média 6M)"
         ))
 
@@ -87,31 +87,173 @@ def render_demografico(filtered_df):
             fig_box = px.box(filtered_df, x='regiao', y='idade_anos', color='regiao', color_discrete_sequence=px.colors.qualitative.Plotly)
             st.plotly_chart(format_fig(fig_box), use_container_width=True)
 
+    st.markdown("---")
+    st.markdown("### Perfil Social vs Acesso à Terapia Antirretroviral (TARV)")
+    st.info("Taxa de gestantes diagnosticadas que conseguiram efetivar a receita e utilizar profilaxia antirretroviral (TARV), filtradas por grupo.")
+    
+    # Pre-processing para Acesso a TARV
+    df_desig = filtered_df.copy()
+    if 'pre_antret' in df_desig.columns:
+        df_desig['pre_antret_num'] = pd.to_numeric(df_desig['pre_antret'], errors='coerce')
+        
+        c3, c4 = st.columns(2)
+        
+        with c3:
+            st.markdown("**Acesso por Grau de Escolaridade**")
+            # Filtrar escolaridades ignoradas
+            df_esc_desig = df_desig[df_desig['escolaridade'] != 'Ignorado'].dropna(subset=['escolaridade', 'pre_antret_num'])
+            if not df_esc_desig.empty:
+                tab_esc = pd.crosstab(df_esc_desig['escolaridade'], df_esc_desig['pre_antret_num'])
+                if 1 in tab_esc.columns:
+                    tab_esc['Taxa_Acesso_TARV (%)'] = (tab_esc[1] / tab_esc.sum(axis=1)) * 100
+                    tab_esc = tab_esc.reset_index()
+                    
+                    # Ordem lógica de escolaridade (de menor para maior, ou vice-versa, pro Plotly desenhar corretamente)
+                    ordem_esc = ['Sem Escolaridade', 'Fund. I', 'Fund. II', 'Fund. Comp.', 'Med. Incomp.', 'Med. Comp.', 'Sup. Incomp.', 'Sup. Comp.']
+                    tab_esc['escolaridade'] = pd.Categorical(tab_esc['escolaridade'], categories=ordem_esc, ordered=True)
+                    tab_esc = tab_esc.sort_values(by='escolaridade', ascending=False) # Plotly empilha de baixo pra cima
+                    
+                    fig_esc_desig = px.bar(
+                        tab_esc, x='Taxa_Acesso_TARV (%)', y='escolaridade', orientation='h',
+                        text_auto='.1f', color='Taxa_Acesso_TARV (%)', color_continuous_scale='viridis_r',
+                        labels={'escolaridade': 'Escolaridade'}
+                    )
+                    fig_esc_desig.update_layout(coloraxis_showscale=False, xaxis_title="Gestantes Protegidas por TARV (%)", yaxis_title="")
+                    st.plotly_chart(format_fig(fig_esc_desig, legend_horiz=False), use_container_width=True)
+                else:
+                    st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
+                    
+        with c4:
+            st.markdown("**Acesso por Cor/Raça**")
+            df_raca_desig = df_desig[df_desig['raca'] != 'Ignorado'].dropna(subset=['raca', 'pre_antret_num'])
+            if not df_raca_desig.empty:
+                tab_raca = pd.crosstab(df_raca_desig['raca'], df_raca_desig['pre_antret_num'])
+                if 1 in tab_raca.columns:
+                    tab_raca['Taxa_Acesso_TARV (%)'] = (tab_raca[1] / tab_raca.sum(axis=1)) * 100
+                    
+                    # Aqui, como é raça, podemos ordenar quem tem mais acesso primeiro, não cronológico
+                    tab_raca = tab_raca.reset_index().sort_values(by='Taxa_Acesso_TARV (%)', ascending=True)
+                    
+                    fig_raca_desig = px.bar(
+                        tab_raca, x='Taxa_Acesso_TARV (%)', y='raca', orientation='h',
+                        text_auto='.1f', color='Taxa_Acesso_TARV (%)', color_continuous_scale='magma',
+                        labels={'raca': 'Raça/Cor'}
+                    )
+                    fig_raca_desig.update_layout(coloraxis_showscale=False, xaxis_title="Gestantes Protegidas por TARV (%)", yaxis_title="")
+                    st.plotly_chart(format_fig(fig_raca_desig, legend_horiz=False), use_container_width=True)
+                else:
+                    st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
+
+
 def render_cartografia(filtered_df, brazil_geojson):
     st.markdown("### Cartografia Estratégica Regional")
+    
+    # 1. Agrupar os casos absolutos por UF
     geo = filtered_df["uf"].value_counts().reset_index()
     geo.columns = ["UF", "Notificacoes"]
-    col_map, col_bar = st.columns([1.5, 1])
     
-    with col_map:
+    # 2. Dados de População Estimada IBGE para transformar número absoluto em relativo
+    populacao_ibge = {
+        'SP': 44411238, 'MG': 20538718, 'RJ': 16054524, 'BA': 14141626, 'PR': 11444380,
+        'RS': 10882965, 'PE': 9058931, 'CE': 8733687, 'PA': 8120131, 'SC': 7610361,
+        'GO': 7056495, 'MA': 6775805, 'PB': 3974687, 'AM': 3941613, 'ES': 3833712,
+        'MT': 3658649, 'RN': 3302729, 'PI': 3271199, 'AL': 3127683, 'DF': 2817381,
+        'MS': 2757013, 'SE': 2209558, 'RO': 1581196, 'TO': 1511460, 'AC': 830018,
+        'AP': 733759, 'RR': 636303
+    }
+    
+    # 3. Calcular a incidência (Casos a cada 100.000 habitantes)
+    geo['Populacao'] = geo['UF'].map(populacao_ibge)
+    geo['Incidencia_100k'] = (geo['Notificacoes'] / geo['Populacao']) * 100000
+    
+    # Opcional: Remover eventuais UFs que não conseguiram cruzar corretamente
+    geo = geo.dropna(subset=['Incidencia_100k'])
+
+    # =========================================================
+    # SEÇÃO 1: VALORES ABSOLUTOS
+    # =========================================================
+    st.markdown("#### 1. Casos Absolutos (Volume Total de Notificações)")
+    col_map_abs, col_bar_abs = st.columns([1.5, 1])
+    
+    with col_map_abs:
         if brazil_geojson:
             st.markdown("**Densidade Geográfica de Casos (Brasil)**")
-            fig_map = px.choropleth(
+            fig_map_abs = px.choropleth(
                 geo, geojson=brazil_geojson, locations="UF", featureidkey="properties.sigla",
-                color="Notificacoes", color_continuous_scale="Blues", scope="south america"
+                color="Notificacoes", color_continuous_scale="Blues", scope="south america",
+                hover_data={"UF": True, "Notificacoes": True, "Incidencia_100k": False, "Populacao": False}
             )
-            fig_map.update_geos(fitbounds="locations", visible=False)
-            fig_map.update_layout(margin={"r":0,"t":10,"l":0,"b":0}, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig_map, use_container_width=True)
+            fig_map_abs.update_geos(fitbounds="locations", visible=False)
+            fig_map_abs.update_layout(margin={"r":0,"t":10,"l":0,"b":0}, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_map_abs, use_container_width=True)
         else:
             st.warning("Falha na renderização espacial: GeoJSON indisponível. Exibindo alternativa tabular.")
 
-    with col_bar:
-        st.markdown("**Top 10 Unidades Federativas (Ranking)**")
-        top_geo = geo.head(10).sort_values(by="Notificacoes", ascending=True)
-        fig_top = px.bar(top_geo, x="Notificacoes", y="UF", orientation='h', text_auto='.3s', color="Notificacoes", color_continuous_scale="Blues")
-        fig_top.update_layout(coloraxis_showscale=False)
-        st.plotly_chart(format_fig(fig_top, legend_horiz=False), use_container_width=True)
+    with col_bar_abs:
+        st.markdown("**Unidades Federativas com maior número de casos**")
+        top_geo_abs = geo.sort_values(by="Notificacoes", ascending=False).head(10)
+        # Invertendo para o Plotly construir a barra do maior em cima
+        top_geo_abs = top_geo_abs.sort_values(by="Notificacoes", ascending=True)
+        
+        fig_top_abs = px.bar(
+            top_geo_abs, 
+            x="Notificacoes", 
+            y="UF", 
+            orientation='h', 
+            text_auto='.3s', 
+            color="Notificacoes", 
+            color_continuous_scale="Blues"
+        )
+        fig_top_abs.update_layout(coloraxis_showscale=False)
+        st.plotly_chart(format_fig(fig_top_abs, legend_horiz=False), use_container_width=True)
+
+    st.markdown("---") # Linha divisória visual
+
+    # =========================================================
+    # SEÇÃO 2: VALORES PROPORCIONAIS (PORCENTAGEM)
+    # =========================================================
+    st.markdown("#### 2. Casos Relativos (Incidência Proporcional à População)")
+    col_map_rel, col_bar_rel = st.columns([1.5, 1])
+    
+    with col_map_rel:
+        if brazil_geojson:
+            st.markdown("**Densidade Geográfica de Casos (Ajuste Demográfico)**")
+            fig_map_rel = px.choropleth(
+                geo, 
+                geojson=brazil_geojson, 
+                locations="UF", 
+                featureidkey="properties.sigla",
+                color="Incidencia_100k", # A Cor do calor responde à incidência
+                color_continuous_scale="YlOrBr", # Usando variações de amarelo/laranja
+                scope="south america",
+                hover_data={"UF": True, "Notificacoes": True, "Incidencia_100k": ":.1f", "Populacao": False},
+                labels={"Incidencia_100k": "Casos/100k hab."}
+            )
+            fig_map_rel.update_geos(fitbounds="locations", visible=False)
+            fig_map_rel.update_layout(margin={"r":0,"t":10,"l":0,"b":0}, plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_map_rel, use_container_width=True)
+        else:
+            st.warning("Falha na renderização espacial: GeoJSON indisponível. Exibindo alternativa tabular.")
+
+    with col_bar_rel:
+        st.markdown("**Unidades Federativas com maior proporção de casos por 100k habitantes**")
+        # Top 10 piores casos em proporção
+        top_geo_rel = geo.sort_values(by="Incidencia_100k", ascending=False).head(10)
+        top_geo_rel = top_geo_rel.sort_values(by="Incidencia_100k", ascending=True)
+        
+        fig_top_rel = px.bar(
+            top_geo_rel, 
+            x="Incidencia_100k", 
+            y="UF", 
+            orientation='h', 
+            text_auto='.1f', # Reduzindo as casas decimais para mostrar, ex: "45.2" 
+            color="Incidencia_100k", 
+            color_continuous_scale="YlOrBr", # Usando variações de amarelo/laranja
+            labels={"Incidencia_100k": "Casos por 100k hab."}
+        )
+        fig_top_rel.update_layout(coloraxis_showscale=False)
+        st.plotly_chart(format_fig(fig_top_rel, legend_horiz=False), use_container_width=True)
+
 
 def render_bivariada(filtered_df):
     st.markdown("### Correlações e Testes de Hipótese Clínicas")
@@ -355,3 +497,101 @@ def render_matriz(filtered_df):
             st.dataframe(filtered_df[cols_to_show].head(1000), use_container_width=True)
     else:
         st.dataframe(filtered_df[cols_to_show].head(1000), use_container_width=True)
+
+def render_cascata(filtered_df):
+    st.markdown("### Adesão ao Pré-Natal e Cascata de Prevenção")
+    st.info("Acompanhamento longitudinal das etapas desde o diagnóstico no SINAN até o momento ideal do parto.")
+    
+    df = filtered_df.copy()
+    
+    # Checar se as colunas necessárias existem com base no loader original minúsculo do db
+    for col in ['pre_prenat', 'pre_antret', 'par_antidu']:
+        if col not in df.columns:
+            st.warning(f"Coluna necessária '{col}' não encontrada para gerar o funil de retenção.")
+            return
+
+    # Limpando os dados para garantir formato numérico temporário 
+    df['pre_prenat_num'] = pd.to_numeric(df['pre_prenat'], errors='coerce').fillna(0)
+    df['pre_antret_num'] = pd.to_numeric(df['pre_antret'], errors='coerce').fillna(0)
+    df['par_antidu_num'] = pd.to_numeric(df['par_antidu'], errors='coerce').fillna(0)
+    
+    # O dataframe principal em views já vem com a coluna 'regiao' do data_loader
+    if 'regiao' not in df.columns:
+        df['regiao'] = 'Geral'
+    else:
+        df = df[df['regiao'] != 'Ignorado']
+
+    # Fases do funil de prevenção
+    fases_nomes = [
+        '1. Diagnóstico', 
+        '2. Pré-Natal', 
+        '3. TARV na<br>Gestação', 
+        '4. ARV no<br>Parto (Ideal)'
+    ]
+    
+    resultados = []
+    
+    # Calcular as etapas para CADA Região
+    for regiao in df['regiao'].unique():
+        df_reg = df[df['regiao'] == regiao]
+        
+        # Etapas Absolutas
+        total_gest = len(df_reg)
+        fez_prenatal = len(df_reg[df_reg['pre_prenat_num'] == 1])
+        prenatal_e_tarv = len(df_reg[(df_reg['pre_prenat_num'] == 1) & (df_reg['pre_antret_num'] == 1)])
+        fluxo_completo = len(df_reg[(df_reg['pre_prenat_num'] == 1) & (df_reg['pre_antret_num'] == 1) & (df_reg['par_antidu_num'] == 1)])
+        
+        quantidades = [total_gest, fez_prenatal, prenatal_e_tarv, fluxo_completo]
+        
+        for i, fase in enumerate(fases_nomes):
+            resultados.append({
+                'Regiao': regiao,
+                'Etapa de Prevenção': fase,
+                'Número de Gestantes': quantidades[i]
+            })
+
+    if not resultados:
+        st.warning("Sem dados válidos de retenção na seleção atual.")
+        return
+
+    # Criar o DataFrame consolidado final
+    df_cascata = pd.DataFrame(resultados)
+    
+    # Ordenar as regiões e as etapas cronológicas
+    df_cascata['Etapa de Prevenção'] = pd.Categorical(df_cascata['Etapa de Prevenção'], categories=fases_nomes, ordered=True)
+    ordem_regioes = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
+    
+    # O Plotly constrói o funil
+    fig = px.funnel(
+        df_cascata, 
+        y='Etapa de Prevenção', 
+        x='Número de Gestantes', 
+        color='Regiao',
+        template='plotly_white',
+        category_orders={"Regiao": ordem_regioes},
+        color_discrete_sequence=px.colors.qualitative.Plotly,
+        labels={'Número de Gestantes': 'Absoluto de Gestantes', 'Etapa de Prevenção': 'Etapas'}
+    )
+    
+    # Customizando layout
+    fig.update_layout(
+        legend_title_text='Região do Brasil',
+        hovermode="y unified",
+        margin={"r":0,"t":20,"l":0,"b":0}
+    )
+    
+    # Formatando o texto de cada barra para mostrar apenas as porcentagens (visão limpa)
+    # E movendo a explicação completa absoluta para a caixa flutuante (hover)
+    fig.update_traces(
+        texttemplate='<b>%{percentInitial:.1%}</b><br>(%{percentPrevious:.1%})', 
+        textposition='inside',
+        hovertemplate=(
+            "<b>%{y}</b><br>"
+            "Gestantes nesta etapa: %{value}<br>"
+            "Retenção Total (desde o Início): %{percentInitial:.1%}<br>"
+            "Retenção vs. Etapa Anterior: %{percentPrevious:.1%}"
+            "<extra></extra>"
+        )
+    )
+
+    st.plotly_chart(format_fig(fig, legend_horiz=True), use_container_width=True)

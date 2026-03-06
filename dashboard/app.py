@@ -13,7 +13,8 @@ from views import (
     render_cartografia, 
     render_bivariada, 
     render_ia, 
-    render_matriz
+    render_matriz,
+    render_cascata
 )
 
 # Suppress pandas FutureWarnings for clean console
@@ -50,18 +51,20 @@ st.markdown(
 render_kpis(filtered_df, ano_sel)
 
 # ---------------- 6. TABS RENDERING ---------------- #
-t1, t2, t3, t4, t5, t6 = st.tabs([
-    "Evolução Temporal ⏱️", 
-    "Perfil Demográfico 🧬", 
-    "Cartografia 🗺️", 
-    "Estatística Bivariada 📊", 
-    "Inteligência Artificial 🧠", 
-    "Matriz Bruta 🗂️"
+t1, t2, t3, t7, t4, t5, t6 = st.tabs([
+    "Evolução Temporal", 
+    "Perfil Social", 
+    "Cartografia", 
+    "Adesão a Pré-natal",
+    "Estatística Bivariada", 
+    "Inteligência Artificial", 
+    "Matriz Bruta"
 ])
 
 with t1: render_temporal(filtered_df)
 with t2: render_demografico(filtered_df)
 with t3: render_cartografia(filtered_df, brazil_geojson)
+with t7: render_cascata(filtered_df)
 with t4: render_bivariada(filtered_df)
 with t5: render_ia(filtered_df)
 with t6: render_matriz(filtered_df)

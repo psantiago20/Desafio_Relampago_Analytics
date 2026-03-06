@@ -55,8 +55,11 @@ def render_temporal(filtered_df, theme_key="light"):
                 fig_hist.add_vline(x=mediana_lag, line_width=2.5, line_dash="dot", line_color=colors['accent_red'], 
                                    annotation_text=f"Mediana: {mediana_lag:.0f} dias", annotation_position="top right", 
                                    annotation_font_color=colors['text_main'], annotation_font_weight="bold")
-                fig_hist.update_layout(xaxis_title="Atraso em Dias", yaxis_title="Frequência", bargap=0.08)
                 st.plotly_chart(format_fig(fig_hist, theme_name=theme_key, legend_horiz=False), use_container_width=True)
+
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("**(Espaço reservado para documentação de insights da Dinâmica Temporal)**")
 
 def render_demografico(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
@@ -145,6 +148,10 @@ def render_demografico(filtered_df, theme_key="light"):
                     st.plotly_chart(format_fig(fig_raca_desig, theme_name=theme_key, legend_horiz=False), use_container_width=True)
                 else:
                     st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
+
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("**(Espaço reservado para documentação de insights do Perfil Social e Demográfico)**")
 
 
 def render_cartografia(filtered_df, brazil_geojson, theme_key="light"):
@@ -257,6 +264,10 @@ def render_cartografia(filtered_df, brazil_geojson, theme_key="light"):
         fig_top_rel.update_layout(coloraxis_showscale=False)
         st.plotly_chart(format_fig(fig_top_rel, theme_name=theme_key, legend_horiz=False), use_container_width=True)
 
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("**(Espaço reservado para documentação de insights de Cartografia e Distribuição Espacial)**")
+
 def render_bivariada(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
     st.markdown("### Correlações e Testes de Hipótese Clínicas")
@@ -287,22 +298,42 @@ def render_bivariada(filtered_df, theme_key="light"):
             fig2.add_annotation(x=0.5, y=1.05, xref="paper", yref="paper", text=f"p-value = {p_2:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"))
             st.plotly_chart(format_fig(fig2, theme_name=theme_key), use_container_width=True)
 
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("**(Espaço reservado para documentação de insights dos Testes de Hipótese e Correlações)**")
+
 def render_ia(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
     st.markdown("### Segmentação e Inferência Preditiva Longitudinal")
     c_m1, c_m2 = st.columns([1, 1])
     
     with c_m1:
-        st.markdown("**Segmentação PCA: Idade vs UF**")
-        df_pca = filtered_df[['idade_anos', 'uf']].dropna().copy()
+        st.markdown("**Segmentação PCA: Idade vs UF (agrupado por Região)**")
+        df_pca = filtered_df[['idade_anos', 'uf', 'regiao']].dropna().copy()
         if not df_pca.empty:
-            df_pca['uf_code'] = df_pca['uf'].astype('category').cat.codes
-            X = StandardScaler().fit_transform(df_pca[['idade_anos', 'uf_code']])
+            # Replicar numeração IBGE exata para alinhar a matemática do PCA com o Notebook
+            ibge_codes = {
+                'RO': 11, 'AC': 12, 'AM': 13, 'RR': 14, 'PA': 15, 'AP': 16, 'TO': 17,
+                'MA': 21, 'PI': 22, 'CE': 23, 'RN': 24, 'PB': 25, 'PE': 26, 'AL': 27, 'SE': 28, 'BA': 29,
+                'MG': 31, 'ES': 32, 'RJ': 33, 'SP': 35,
+                'PR': 41, 'SC': 42, 'RS': 43,
+                'MS': 50, 'MT': 51, 'GO': 52, 'DF': 53
+            }
+            df_pca['uf_num'] = df_pca['uf'].map(ibge_codes).fillna(0)
+            
+            X = StandardScaler().fit_transform(df_pca[['idade_anos', 'uf_num']])
             coords = PCA(n_components=2).fit_transform(X)
             df_pca['PCA1'] = coords[:, 0]
             df_pca['PCA2'] = coords[:, 1]
-            fig_pca = px.scatter(df_pca.sample(min(2000, len(df_pca))), x='PCA1', y='PCA2', color='uf', opacity=0.7, color_discrete_sequence=px.colors.qualitative.Bold)
-            st.plotly_chart(format_fig(fig_pca, theme_name=theme_key, legend_horiz=False), use_container_width=True)
+            fig_pca = px.scatter(
+                df_pca.sample(min(2000, len(df_pca))), 
+                x='PCA1', y='PCA2', color='regiao', 
+                opacity=0.85, 
+                color_discrete_sequence=px.colors.qualitative.Set2,
+                labels={'regiao': 'Regiões'}
+            )
+            fig_pca.update_traces(marker=dict(size=8, line=dict(width=0.4, color='white')))
+            st.plotly_chart(format_fig(fig_pca, theme_name=theme_key, legend_horiz=True), use_container_width=True)
 
     with c_m2:
         st.markdown("**Drivers do Atraso de Notificação (Random Forest)**")
@@ -542,6 +573,14 @@ def render_ia(filtered_df, theme_key="light"):
             *   **RMSE (Raiz do Erro Quadrático Médio):** Similar ao MAE, mas penaliza mais erros grandes, detectando picos atípicos.
         """)
 
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("""
+* **Segmentação PCA:** Ao agrupar os dados por idade e macrorregião (em vez de 27 UFs isoladas), o gráfico se torna mais coeso, permitindo enxergar agrupamentos demográficos consolidados e reduzindo o ruído visual percebido (Overplotting).
+* **Modelo Random Forest (Drivers):** Essa análise identifica as "Features Importances". Ela revela quais atributos estatísticos da gestante (como a região ou o acesso ao pré-natal) são os maiores "culpados" pelas ocorrências ou atrasos de notificação verificados no modelo preditivo.
+* **Projeção Híbrida (Prophet vs RF):** Ao executar a inferência de longo prazo no botão, o sistema roda dois algoritmos simultaneamente para criar um *ensemble* estatístico. Isso gera duas visões do futuro (geralmente Prophet captura melhor sazonalidades puras e RF captura melhor auto-regressão complexa), oferecendo ao gestor público um intervalo de variação para planejamento de políticas de saúde.
+    """)
+
 def render_matriz(filtered_df, theme_key="light"):
 
     st.markdown("### Matriz Exploratória (Data Mining)")
@@ -555,6 +594,10 @@ def render_matriz(filtered_df, theme_key="light"):
             st.dataframe(filtered_df[cols_to_show].head(1000), use_container_width=True)
     else:
         st.dataframe(filtered_df[cols_to_show].head(1000), use_container_width=True)
+
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("**(Espaço reservado para documentação de insights sobre a Tabela de Microdados)**")
 
 def render_cascata(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
@@ -654,3 +697,7 @@ def render_cascata(filtered_df, theme_key="light"):
     )
 
     st.plotly_chart(format_fig(fig, theme_name=theme_key, legend_horiz=True), use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("💡 Insights")
+    st.markdown("**(Espaço reservado para documentação de insights sobre a Cascata de Prevenção)**")

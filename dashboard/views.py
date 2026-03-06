@@ -332,7 +332,7 @@ def render_ia(filtered_df, theme_key="light"):
                 color_discrete_sequence=px.colors.qualitative.Set2,
                 labels={'regiao': 'Regiões'}
             )
-            fig_pca.update_traces(marker=dict(size=8, line=dict(width=0.4, color='white')))
+            fig_pca.update_traces(marker=dict(size=8, line=dict(width=0.4, color=colors['bg_color'])))
             st.plotly_chart(format_fig(fig_pca, theme_name=theme_key, legend_horiz=True), use_container_width=True)
 
     with c_m2:
@@ -344,8 +344,10 @@ def render_ia(filtered_df, theme_key="light"):
             y_rf = df_rf['atraso_dias']
             rf_model = RandomForestRegressor(n_estimators=50, random_state=42).fit(X_rf, y_rf)
             imp = pd.DataFrame({'feature': X_rf.columns, 'importance': rf_model.feature_importances_}).sort_values('importance', ascending=True)
-            fig_rf = px.bar(imp.tail(10), x='importance', y='feature', orientation='h', color='importance', color_continuous_scale='Greens' if theme_key == "light" else 'Viridis')
-            fig_rf.update_layout(coloraxis_showscale=False)
+            fig_rf = px.bar(
+                imp.tail(10), x='importance', y='feature', orientation='h', 
+                color_discrete_sequence=[colors['primary']]
+            )
             st.plotly_chart(format_fig(fig_rf, theme_name=theme_key, legend_horiz=False), use_container_width=True)
             
     st.divider()

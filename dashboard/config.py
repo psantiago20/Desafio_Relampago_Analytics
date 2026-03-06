@@ -17,7 +17,7 @@ THEMES = {
         "background": "#0f172a", # Deep Slate
         "card": "#1e293b",       # Slate-800
         "text_main": "#f8fafc",  # Almost white
-        "text_muted": "#94a3b8", # Slate-400
+        "text_muted": "#cbd5e1", # Brightened from 94a3b8 for better legibility
         "border": "rgba(255, 255, 255, 0.1)",
         "accent_green": "#34d399",
         "accent_red": "#f87171",
@@ -195,6 +195,19 @@ def get_css(theme_name="light"):
     
     footer {{ visibility: hidden; }}
     #MainMenu {{ visibility: hidden; }}
+
+    /* Fix Streamlit Info/Warning/Success boxes colors */
+    div[data-testid="stAlert"] {{
+        background-color: var(--card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 0.5rem !important;
+    }}
+    div[data-testid="stAlert"] p, 
+    div[data-testid="stAlert"] li, 
+    div[data-testid="stAlert"] span,
+    div[data-testid="stAlert"] div {{ 
+        color: var(--text-main) !important; 
+    }}
 
     [data-testid="stMetricLabel"] {{ color: var(--text-muted) !important; }}
     [data-testid="stMetricValue"] {{ color: var(--text-main) !important; }}

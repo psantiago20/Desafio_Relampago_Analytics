@@ -58,7 +58,7 @@ def render_temporal(filtered_df, theme_key="light"):
                 st.plotly_chart(format_fig(fig_hist, theme_name=theme_key, legend_horiz=False), use_container_width=True)
 
     st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">analytics</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("**(Espaço reservado para documentação de insights da Dinâmica Temporal)**")
 
 def render_demografico(filtered_df, theme_key="light"):
@@ -151,7 +151,7 @@ def render_demografico(filtered_df, theme_key="light"):
                     st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
 
     st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">analytics</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("**(Espaço reservado para documentação de insights do Perfil Social e Demográfico)**")
 
 
@@ -266,7 +266,7 @@ def render_cartografia(filtered_df, brazil_geojson, theme_key="light"):
         st.plotly_chart(format_fig(fig_top_rel, theme_name=theme_key, legend_horiz=False), use_container_width=True)
 
     st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">analytics</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("**(Espaço reservado para documentação de insights de Cartografia e Distribuição Espacial)**")
 
 def render_bivariada(filtered_df, theme_key="light"):
@@ -285,8 +285,8 @@ def render_bivariada(filtered_df, theme_key="light"):
             df_plot = tab.reset_index().melt(id_vars='idade_categoria', var_name='Resposta', value_name='Freq')
             palette1 = px.colors.qualitative.T10 if theme_key == "light" else px.colors.qualitative.Pastel
             fig1 = px.bar(df_plot, x='idade_categoria', y='Freq', color='Resposta', barmode='group', color_discrete_sequence=palette1)
-            fig1.add_annotation(x=0.5, y=1.08, xref="paper", yref="paper", text=f"p-value = {p:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"))
-            fig1.update_layout(margin=dict(t=60)) 
+            fig1.add_annotation(x=0, y=1.05, xref="paper", yref="paper", text=f"p-value = {p:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"), xanchor='left')
+            fig1.update_layout(margin=dict(t=50)) 
             st.plotly_chart(format_fig(fig1, theme_name=theme_key), use_container_width=True)
             
     with c2:
@@ -299,12 +299,12 @@ def render_bivariada(filtered_df, theme_key="light"):
             pct_df = (tab2.div(tab2.sum(axis=1), axis=0) * 100).reset_index().melt(id_vars='momento_diagnostico', value_name='Percentual')
             palette2 = [colors['primary'], colors['text_muted']] if theme_key == "light" else [colors['primary'], "#94a3b8"]
             fig2 = px.bar(pct_df, x='momento_diagnostico', y='Percentual', color='tipo_parto', text_auto='.1f', color_discrete_sequence=palette2)
-            fig2.add_annotation(x=0.5, y=1.08, xref="paper", yref="paper", text=f"p-value = {p_2:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"))
-            fig2.update_layout(margin=dict(t=60)) # Extra top margin for the annotation
+            fig2.add_annotation(x=0, y=1.05, xref="paper", yref="paper", text=f"p-value = {p_2:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"), xanchor='left')
+            fig2.update_layout(margin=dict(t=50)) 
             st.plotly_chart(format_fig(fig2, theme_name=theme_key), use_container_width=True)
 
     st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">analytics</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("**(Espaço reservado para documentação de insights dos Testes de Hipótese e Correlações)**")
 
 def render_ia(filtered_df, theme_key="light"):
@@ -533,7 +533,7 @@ def render_ia(filtered_df, theme_key="light"):
         if f"{model_name_prophet} → Dez/2027" in series_sel:
             ax.plot(prophet_future['ds'], prophet_future['yhat'], color=colors['accent_red'], linewidth=2.5, label=f'{model_name_prophet} → Dez/2027')
         if f"IC {model_name_prophet}" in series_sel:
-            ax.fill_between(prophet_future['ds'], prophet_future['yhat_lower'], prophet_future['yhat_upper'], alpha=0.12, color=colors['accent_red'], label=f'IC {model_name_prophet}')
+            ax.fill_between(prophet_future['ds'], prophet_future['yhat_lower'], prophet_future['yhat_upper'], alpha=0.45, color=colors['accent_red'], label=f'IC {model_name_prophet}')
         if "RandomForest → Dez/2027" in series_sel:
             ax.plot(rf_future_df['ds'], rf_future_df['yhat'], color=colors['accent_green'], linewidth=2.5, label='RandomForest → Dez/2027')
 
@@ -581,7 +581,7 @@ def render_ia(filtered_df, theme_key="light"):
         """)
 
     st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">analytics</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("""
 * **Segmentação PCA:** Ao agrupar os dados por idade e macrorregião (em vez de 27 UFs isoladas), o gráfico se torna mais coeso, permitindo enxergar agrupamentos demográficos consolidados e reduzindo o ruído visual percebido (Overplotting).
 * **Modelo Random Forest (Drivers):** Essa análise identifica as "Features Importances". Ela revela quais atributos estatísticos da gestante (como a região ou o acesso ao pré-natal) são os maiores "culpados" pelas ocorrências ou atrasos de notificação verificados no modelo preditivo.
@@ -603,7 +603,7 @@ def render_matriz(filtered_df, theme_key="light"):
         st.dataframe(filtered_df[cols_to_show].head(1000), use_container_width=True)
 
     st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">analytics</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("**(Espaço reservado para documentação de insights sobre a Tabela de Microdados)**")
 
 def render_cascata(filtered_df, theme_key="light"):
@@ -706,5 +706,5 @@ def render_cascata(filtered_df, theme_key="light"):
     st.plotly_chart(format_fig(fig, theme_name=theme_key, legend_horiz=True), use_container_width=True)
 
     st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">analytics</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("**(Espaço reservado para documentação de insights sobre a Cascata de Prevenção)**")

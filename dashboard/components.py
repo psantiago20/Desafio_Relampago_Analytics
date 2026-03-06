@@ -97,8 +97,8 @@ def render_kpis(filtered_df, ano_sel):
 
     # Render with custom HTML - Labels exactly as requested
     kpi_cols = st.columns(4)
-    with kpi_cols[0]: st.markdown(render_kpi_card("NOTIFICAÇÕES", n_notific, "analytics"), unsafe_allow_html=True)
-    with kpi_cols[1]: st.markdown(render_kpi_card("MDN. LAG", lag, "schedule", "-2d", "up"), unsafe_allow_html=True)
+    with kpi_cols[0]: st.markdown(render_kpi_card("NOTIFICAÇÕES", n_notific, "bar_chart"), unsafe_allow_html=True)
+    with kpi_cols[1]: st.markdown(render_kpi_card("MEDIANA LAG", lag, "schedule", "-2d", "up"), unsafe_allow_html=True)
     with kpi_cols[2]: st.markdown(render_kpi_card("IDADE MÉDIA", idade, "person"), unsafe_allow_html=True)
     with kpi_cols[3]: st.markdown(render_kpi_card("VARIAÇÃO", variacao, "trending_up" if v_type=="up" else "trending_down", delta=None, delta_type=v_type), unsafe_allow_html=True)
     

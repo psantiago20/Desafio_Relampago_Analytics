@@ -77,7 +77,8 @@ def render_demografico(filtered_df, theme_key="light"):
             import plotly.figure_factory as ff
             hist_data = [filtered_df['idade_anos'].dropna()]
             group_labels = ['Idade']
-            fig_kde = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False, colors=[colors["primary"]])
+            fig_kde = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False, colors=[colors["primary"] if theme_key == "light" else colors["accent_green"]])
+            fig_kde.update_traces(line=dict(width=3))
             st.plotly_chart(format_fig(fig_kde, theme_name=theme_key, legend_horiz=False), use_container_width=True)
             
     with c2:
@@ -282,7 +283,8 @@ def render_bivariada(filtered_df, theme_key="light"):
             tab = pd.crosstab(df_clean['idade_categoria'], df_clean['momento_diagnostico'])
             chi2, p, dof, ex = chi2_contingency(tab)
             df_plot = tab.reset_index().melt(id_vars='idade_categoria', var_name='Resposta', value_name='Freq')
-            fig1 = px.bar(df_plot, x='idade_categoria', y='Freq', color='Resposta', barmode='group', color_discrete_sequence=px.colors.qualitative.T10)
+            palette1 = px.colors.qualitative.T10 if theme_key == "light" else px.colors.qualitative.Pastel
+            fig1 = px.bar(df_plot, x='idade_categoria', y='Freq', color='Resposta', barmode='group', color_discrete_sequence=palette1)
             fig1.add_annotation(x=0.5, y=0.95, xref="paper", yref="paper", text=f"p-value = {p:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"))
             st.plotly_chart(format_fig(fig1, theme_name=theme_key), use_container_width=True)
             
@@ -294,7 +296,8 @@ def render_bivariada(filtered_df, theme_key="light"):
             tab2 = pd.crosstab(df_clean2['momento_diagnostico'], df_clean2['tipo_parto'])
             chi2_2, p_2, dof_2, ex_2 = chi2_contingency(tab2)
             pct_df = (tab2.div(tab2.sum(axis=1), axis=0) * 100).reset_index().melt(id_vars='momento_diagnostico', value_name='Percentual')
-            fig2 = px.bar(pct_df, x='momento_diagnostico', y='Percentual', color='tipo_parto', text_auto='.1f', color_discrete_sequence=[colors['primary'], colors['text_muted']])
+            palette2 = [colors['primary'], colors['text_muted']] if theme_key == "light" else [colors['primary'], "#94a3b8"]
+            fig2 = px.bar(pct_df, x='momento_diagnostico', y='Percentual', color='tipo_parto', text_auto='.1f', color_discrete_sequence=palette2)
             fig2.add_annotation(x=0.5, y=1.05, xref="paper", yref="paper", text=f"p-value = {p_2:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"))
             st.plotly_chart(format_fig(fig2, theme_name=theme_key), use_container_width=True)
 
@@ -332,7 +335,7 @@ def render_ia(filtered_df, theme_key="light"):
                 color_discrete_sequence=px.colors.qualitative.Set2,
                 labels={'regiao': 'Regiões'}
             )
-            fig_pca.update_traces(marker=dict(size=8, line=dict(width=0.4, color=colors['bg_color'])))
+            fig_pca.update_traces(marker=dict(size=8, line=dict(width=0.4, color=colors['background'])))
             st.plotly_chart(format_fig(fig_pca, theme_name=theme_key, legend_horiz=True), use_container_width=True)
 
     with c_m2:

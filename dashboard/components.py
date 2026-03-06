@@ -112,11 +112,11 @@ def format_fig(fig, theme_name="light", legend_horiz=True):
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color=colors["text_muted"], size=12),
         margin=dict(l=20, r=20, t=50, b=40),
-        hoverlabel=dict(bgcolor=colors["card"], font_size=13, font_family="Inter")
+        hoverlabel=dict(bgcolor=colors["card"], font_color=colors["text_main"], font_size=13, font_family="Inter")
     )
     
     if legend_horiz:
-        layout_update["legend"] = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, title_text="")
+        layout_update["legend"] = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, title_text="", font=dict(color=colors["text_main"]))
     else:
         layout_update["legend"] = dict(title_text="", font=dict(color=colors["text_main"]))
         
@@ -125,14 +125,14 @@ def format_fig(fig, theme_name="light", legend_horiz=True):
     # Generic axes formatting
     fig.update_xaxes(
         title_font=dict(color=colors["text_main"], size=13),
-        tickfont=dict(color=colors["text_muted"]),
+        tickfont=dict(color=colors["text_main"]),
         gridcolor=colors["border"] if theme_name == "dark" else "#f1f5f9",
         linecolor=colors["border"],
         showgrid=False
     )
     fig.update_yaxes(
         title_font=dict(color=colors["text_main"], size=13),
-        tickfont=dict(color=colors["text_muted"]),
+        tickfont=dict(color=colors["text_main"]),
         gridcolor=colors["border"] if theme_name == "dark" else "#f1f5f9",
         linecolor=colors["border"],
         showgrid=True

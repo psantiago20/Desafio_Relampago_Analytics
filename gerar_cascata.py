@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 
+
 def gerar_cascata_prevencao():
     # Caminhos possíveis para o arquivo de dados
     filepaths = [
@@ -94,42 +95,44 @@ def gerar_cascata_prevencao():
     df_cascata['Etapa de Prevenção'] = pd.Categorical(df_cascata['Etapa de Prevenção'], categories=fases_nomes, ordered=True)
     ordem_regioes = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
     
-    # Visualização: Gráfico de Barras Agrupadas
-    plt.figure(figsize=(14, 8))
-    sns.set_theme(style="whitegrid", rc={"axes.facecolor":"#f9f9f9"})
+    import plotly.express as px
     
-    # Em vez de volume bruto, vamos plotar a '%' para comparar regiões desiguais num funil justo
-    ax = sns.barplot(
-        data=df_cascata, 
-        x='Etapa de Prevenção', 
-        y='Retenção (%)', 
-        hue='Regiao',
-        hue_order=ordem_regioes,
-        palette='Set2'
+    # O Plotly Exige que a ordenação das categorias seja respeitada na renderização
+    # Ele também constrói o funil naturalmente de cima para baixo
+    fig = px.funnel(
+        df_cascata, 
+        y='Etapa de Prevenção', 
+        x='Número de Gestantes', 
+        color='Regiao',
+        template='plotly_white',
+        title="Cascata de Prevenção do HIV por Região do Brasil (Funil de Retenção)",
+        labels={'Número de Gestantes': 'Absoluto de Gestantes', 'Etapa de Prevenção': 'Etapas'}
     )
     
-    # Customizando e limpando o gráfico
-    plt.title("Cascata de Prevenção do HIV por Região do Brasil\n(Percentual Retido em Cada Etapa)", fontsize=16, fontweight='bold', pad=20)
-    plt.xlabel("") 
-    plt.ylabel("Taxa de Retenção (%)", fontsize=12, fontweight='bold')
-    plt.ylim(0, 115) # Espaço superior para legendas não encavalarem
+    # Customizando layout para ficar visualmente incrível
+    fig.update_layout(
+        title_font=dict(size=20),
+        legend_title_text='Região do Brasil',
+        # Configurar para que hover mostre todas as informações alinhadas
+        hovermode="y unified"
+    )
     
-    # Legenda fora do gráfico principal
-    plt.legend(title='Região', bbox_to_anchor=(1.02, 1), loc='upper left')
-    
-    # Adicionando os valores numéricos em cima de cada barra (somente a %)
-    for p in ax.patches:
-        height = p.get_height()
-        if height > 0: # Não plota números nulos
-            ax.annotate(
-                f"{height:.0f}%", 
-                (p.get_x() + p.get_width() / 2., height), 
-                ha='center', va='bottom', fontsize=10,
-                xytext=(0, 3), textcoords='offset points'
-            )
-            
-    plt.tight_layout()
-    plt.show()
+    # Formatando o texto de cada barra para mostrar apenas as porcentagens (visão limpa)
+    # E movendo a explicação completa absoluta para a caixa flutuante (hover)
+    fig.update_traces(
+        texttemplate='<b>%{percentInitial:.1%}</b><br>(%{percentPrevious:.1%})', 
+        textposition='inside',
+        hovertemplate=(
+            "<b>%{y}</b><br>"
+            "Gestantes nesta etapa: %{value}<br>"
+            "Retenção Total (desde o início): %{percentInitial:.1%}<br>"
+            "Retenção vs. Etapa Anterior: %{percentPrevious:.1%}"
+            "<extra></extra>"
+        )
+    )
+
+    # Abre o gráfico no navegador de forma interativa
+    fig.show()
 
 if __name__ == "__main__":
     gerar_cascata_prevencao()

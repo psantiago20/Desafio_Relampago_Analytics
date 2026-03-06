@@ -556,7 +556,8 @@ def render_matriz(filtered_df, theme_key="light"):
     else:
         st.dataframe(filtered_df[cols_to_show].head(1000), use_container_width=True)
 
-def render_cascata(filtered_df):
+def render_cascata(filtered_df, theme_key="light"):
+    colors = THEMES[theme_key]
     st.markdown("### Adesão ao Pré-Natal e Cascata de Prevenção")
     st.info("Acompanhamento longitudinal das etapas desde o diagnóstico no SINAN até o momento ideal do parto.")
     
@@ -625,7 +626,7 @@ def render_cascata(filtered_df):
         y='Etapa de Prevenção', 
         x='Número de Gestantes', 
         color='Regiao',
-        template='plotly_white',
+        template='plotly_dark' if theme_key == 'dark' else 'plotly_white',
         category_orders={"Regiao": ordem_regioes},
         color_discrete_sequence=px.colors.qualitative.Plotly,
         labels={'Número de Gestantes': 'Absoluto de Gestantes', 'Etapa de Prevenção': 'Etapas'}
@@ -652,4 +653,4 @@ def render_cascata(filtered_df):
         )
     )
 
-    st.plotly_chart(format_fig(fig, legend_horiz=True), use_container_width=True)
+    st.plotly_chart(format_fig(fig, theme_name=theme_key, legend_horiz=True), use_container_width=True)

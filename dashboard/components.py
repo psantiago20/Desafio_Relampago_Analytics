@@ -10,7 +10,9 @@ except ImportError:
 
 def render_sidebar(df_raw):
     with st.sidebar:
-        st.image("https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/h/hiv-aids/imagens/logo-aids-horizontal.png/@@images/image", width=220)
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Red_and_Black_Ribbon.png/640px-Red_and_Black_Ribbon.png", width=110)
         st.markdown("---")
         st.markdown("### Parâmetros Experimentais")
         

@@ -72,8 +72,10 @@ def render_demografico(filtered_df):
             import plotly.figure_factory as ff
             hist_data = [filtered_df['idade_anos'].dropna()]
             group_labels = ['Idade']
-            fig_kde = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False, colors=[COLORS["primary"]])
+            fig_kde = ff.create_distplot(hist_data, group_labels, show_hist=True, bin_size=1, show_rug=False, colors=[COLORS["accent"]])
+            fig_kde.update_layout(bargap=0.1)
             st.plotly_chart(format_fig(fig_kde, legend_horiz=False), use_container_width=True)
+
             
     with c2:
         st.markdown("**Grau de Escolaridade Reportado**")

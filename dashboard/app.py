@@ -2,7 +2,7 @@ import streamlit as st
 import warnings
 
 # Configuration and Data Loader
-from config import COLORS, CSS_STYLE
+from config import get_css, THEMES
 from data_loader import load_data, get_brazil_geojson
 
 # Components and Views
@@ -27,21 +27,22 @@ st.set_page_config(
     layout="wide",
 )
 
-st.markdown(CSS_STYLE, unsafe_allow_html=True)
-
 # ---------------- 2. DATA LOADING ---------------- #
 brazil_geojson = get_brazil_geojson()
 df_raw = load_data()
 
-# ---------------- 3. SIDEBAR & FILTERS ---------------- #
-filtered_df, ano_sel = render_sidebar(df_raw)
+# ---------------- 3. SIDEBAR, FILTERS & THEME ---------------- #
+filtered_df, ano_sel, theme_key = render_sidebar(df_raw)
+
+# Inject dynamic CSS based on theme
+st.markdown(get_css(theme_key), unsafe_allow_html=True)
 
 # ---------------- 4. HEADER ---------------- #
 st.title("Vigilância Epidemiológica: HIV Gestacional")
 st.markdown(
     f"""
-    <div style='color: {COLORS['text_muted']}; font-size: 1.1rem; margin-bottom: 1.5rem; font-family: Inter, sans-serif;'>
-        <b>Plataforma Acadêmica de Inteligência Especializada</b> | Base SINAN/MS<br>
+    <div style='color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1.5rem; font-family: Inter, sans-serif;'>
+        <b>Plataforma de Inteligência Especializada</b> | Base SINAN/MS<br>
         <i>Volume amostral atual: <b>{filtered_df.shape[0]:,}</b> notificações (N).</i>
     </div>
     """, unsafe_allow_html=True
@@ -61,13 +62,13 @@ t1, t2, t3, t7, t4, t5, t6 = st.tabs([
     "Matriz Bruta"
 ])
 
-with t1: render_temporal(filtered_df)
-with t2: render_demografico(filtered_df)
-with t3: render_cartografia(filtered_df, brazil_geojson)
-with t7: render_cascata(filtered_df)
-with t4: render_bivariada(filtered_df)
-with t5: render_ia(filtered_df)
-with t6: render_matriz(filtered_df)
+with t1: render_temporal(filtered_df, theme_key)
+with t2: render_demografico(filtered_df, theme_key)
+with t3: render_cartografia(filtered_df, brazil_geojson, theme_key)
+with t7: render_cascata(filtered_df, theme_key)
+with t4: render_bivariada(filtered_df, theme_key)
+with t5: render_ia(filtered_df, theme_key)
+with t6: render_matriz(filtered_df, theme_key)
 
 st.markdown("---")
 st.caption("Base: SINAN/MS | Projeto Científico e Institucional Interativo")

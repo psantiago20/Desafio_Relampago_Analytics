@@ -291,15 +291,53 @@ def render_bivariada(filtered_df, theme_key="light"):
             
     with c2:
         st.markdown("**Relação Tipo de Parto x Pré-Natal (Proporcional)**")
-        df_clean2 = filtered_df.dropna(subset=['tipo_parto', 'momento_diagnostico'])
-        df_clean2 = df_clean2[(df_clean2['tipo_parto'] != 'Ignorado') & (df_clean2['momento_diagnostico'] != 'Ignorado')]
+        df_clean2 = filtered_df.dropna(subset=['tipo_parto', 'momento_diagnostico']).copy()
+        
+        # Agrupar momentos de diagnóstico em categorias binárias de Pré-Natal
+        # 'Pré-natal' (1) -> Realizou
+        # 'Sem pré-natal' (4), 'Parto' (2), 'Pós-parto' (3) -> Não realizou
+        pn_map = {
+            'Pré-natal': 'Realizou Pré-Natal',
+            'Sem pré-natal': 'Não realizou Pré-Natal',
+            'Parto': 'Não realizou Pré-Natal',
+            'Pós-parto': 'Não realizou Pré-Natal'
+        }
+        df_clean2['status_pre_natal'] = df_clean2['momento_diagnostico'].map(pn_map)
+        
+        # Remover 'Ignorado' e garantir que temos dados válidos
+        df_clean2 = df_clean2[df_clean2['status_pre_natal'].notna() & (df_clean2['tipo_parto'] != 'Ignorado')]
+        
         if not df_clean2.empty:
-            tab2 = pd.crosstab(df_clean2['momento_diagnostico'], df_clean2['tipo_parto'])
+            tab2 = pd.crosstab(df_clean2['status_pre_natal'], df_clean2['tipo_parto'])
             chi2_2, p_2, dof_2, ex_2 = chi2_contingency(tab2)
-            pct_df = (tab2.div(tab2.sum(axis=1), axis=0) * 100).reset_index().melt(id_vars='momento_diagnostico', value_name='Percentual')
+            
+            # Cálculo percentual por grupo de Pré-Natal
+            pct_df = (tab2.div(tab2.sum(axis=1), axis=0) * 100).reset_index().melt(id_vars='status_pre_natal', value_name='Percentual')
+            
             palette2 = [colors['primary'], colors['text_muted']] if theme_key == "light" else [colors['primary'], "#94a3b8"]
-            fig2 = px.bar(pct_df, x='momento_diagnostico', y='Percentual', color='tipo_parto', text_auto='.1f', color_discrete_sequence=palette2)
-            fig2.add_annotation(x=0, y=1.05, xref="paper", yref="paper", text=f"p-value = {p_2:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"), xanchor='left')
+            
+            fig2 = px.bar(
+                pct_df, 
+                x='status_pre_natal', 
+                y='Percentual', 
+                color='tipo_parto', 
+                text_auto='.1f', 
+                color_discrete_sequence=palette2,
+                labels={
+                    'status_pre_natal': 'Acompanhamento Pré-Natal',
+                    'tipo_parto': 'Tipo de Parto',
+                    'Percentual': 'Distribuição (%)'
+                }
+            )
+            fig2.update_traces(texttemplate='%{y:.1f}%', textposition='inside')
+            
+            fig2.add_annotation(
+                x=0, y=1.05, xref="paper", yref="paper", 
+                text=f"p-value = {p_2:.4e}", 
+                showarrow=False, 
+                font=dict(color=colors['accent_red'], size=14, weight="bold"), 
+                xanchor='left'
+            )
             fig2.update_layout(margin=dict(t=50)) 
             st.plotly_chart(format_fig(fig2, theme_name=theme_key), use_container_width=True)
 

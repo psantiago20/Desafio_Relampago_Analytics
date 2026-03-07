@@ -32,13 +32,13 @@ def render_temporal(filtered_df, theme_key="light"):
         fig_line = go.Figure()
         fig_line.add_trace(go.Scatter(
             x=ts['dt_notific'], y=ts['casos'], mode='lines', fill='tozeroy',
-            line=dict(width=3, color=colors['primary'], shape='spline', smoothing=1.3),
+            line=dict(width=3, color=colors['primary']),
             fillcolor=colors['fill_color'], name="Casos Mensais"
         ))
         
         fig_line.add_trace(go.Scatter(
             x=ts['dt_notific'], y=ts['Tendencia_MA6'], mode='lines',
-            line=dict(width=2.5, color=colors['accent_red'], dash='dash', shape='spline', smoothing=1.3),
+            line=dict(width=2.5, color=colors['accent_red'], dash='dash'),
             name="Tendência (Média 6M)"
         ))
 
@@ -77,8 +77,8 @@ def render_demografico(filtered_df, theme_key="light"):
             import plotly.figure_factory as ff
             hist_data = [filtered_df['idade_anos'].dropna()]
             group_labels = ['Idade']
-            fig_kde = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False, colors=[colors["primary"] if theme_key == "light" else colors["accent_green"]])
-            fig_kde.update_traces(line=dict(width=3))
+            fig_kde = ff.create_distplot(hist_data, group_labels, show_hist=True, bin_size=1, show_rug=False, colors=["#805AD5"])
+            fig_kde.update_layout(bargap=0.1)
             st.plotly_chart(format_fig(fig_kde, theme_name=theme_key, legend_horiz=False), use_container_width=True)
             
     with c2:

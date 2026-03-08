@@ -129,9 +129,16 @@ def render_temporal(filtered_df, theme_key="light"):
         last_ma = ts_limpa['MA30'].iloc[-1]
         prev_ma = ts_limpa['MA30'].iloc[-2] if len(ts_limpa['MA30']) > 1 else last_ma
         direction = "alta" if last_ma > prev_ma else "queda"
-        st.markdown(f"* **Análise de Tendência:** A média móvel de 30 meses (MA30) indica uma tendência de **{direction}** no volume de notificações recentes.")
     
-    st.markdown("**(Espaço reservado para documentação de insights da Dinâmica Temporal)**")
+    st.markdown("""
+* **Concentração Regional e Impacto da Pandemia:** Os dados mostram que as regiões mais populosas concentram maior número absoluto de casos de HIV em gestantes, refletindo a distribuição populacional do país. Observa-se uma redução dos casos em 2020, provavelmente relacionada ao impacto da pandemia de COVID-19, que comprometeu o acesso ao pré-natal e à testagem. Além disso, diferenças regionais estão associadas a desigualdades no acesso aos serviços de saúde e às tecnologias de diagnóstico, o que influencia a detecção e a notificação dos casos.
+* **Erradicação:** A Transmissão vertical de HIV foi essencialmente eliminada (abaixo de 2%) no país, como confirmado por Boletim Epidemiológico do Ministério da Saúde de Dezembro 2025. GOV, 2025. 
+
+**Referências:**
+* https://www.gov.br/saude/pt-br/centrais-de-conteudo/publicacoes/boletins/epidemiologicos/especiais/2025/boletim-epidemiologico-de-hiv-e-aids-numero-especial-dez-2025.pdf
+* OLIVEIRA, Ricardo Antunes Dantas de et al. Barreiras de acesso aos serviços em cinco Regiões de Saúde do Brasil: percepção de gestores e profissionais do Sistema Único de Saúde. Cadernos de saúde Pública, v. 35, p. e00120718, 2019.
+* GOV. Brasil elimina transmissão vertical do HIV da mãe para o bebê e alcança menor taxa de mortalidade dos últimos anos. Ministério da Saúde. Dezembro, 2025. (https://www.gov.br/saude/pt-br/assuntos/noticias/2025/dezembro/brasil-elimina-transmissao-vertical-do-hiv-da-mae-para-o-bebe-e-alcanca-menor-taxa-de-mortalidade-dos-ultimos-anos)
+    """)
 
 def render_demografico(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
@@ -240,7 +247,10 @@ def render_demografico(filtered_df, theme_key="light"):
 
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
-    st.markdown("**(Espaço reservado para documentação de insights do Perfil Social e Demográfico)**")
+    st.markdown("""
+* **Determinantes Sociais e Acesso à TARV:** Enquanto a adesão ao pré-natal mostrou variações modestas entre os grupos (~6%), o acesso à Terapia Antirretroviral (TARV) revelou desigualdades muito mais expressivas, com diferenças de até 20 pontos percentuais entre grupos raciais e 15 pontos entre níveis de escolaridade. Isso sugere que as barreiras de acesso ao tratamento são mais sensíveis aos determinantes sociais do que a adesão ao pré-natal em si, apontando para iniquidades estruturais no cuidado às gestantes HIV positivas no Brasil.
+* **Metas Globais de Erradicação:** O maior objetivo é que a taxa de realização de TARV atinja 95% para cumprir a meta global 95-95-95, que será alcançada quando 95% das pessoas vivendo com HIV conheçam o diagnóstico, 95% delas estejam em tratamento e 95% das tratadas alcancem supressão viral. A equalização no acesso medicamentoso é o passo crucial para esta conquista.
+    """)
 
 
 def render_cartografia(filtered_df, brazil_geojson, theme_key="light"):
@@ -355,7 +365,11 @@ def render_cartografia(filtered_df, brazil_geojson, theme_key="light"):
 
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
-    st.markdown("**(Espaço reservado para documentação de insights de Cartografia e Distribuição Espacial)**")
+    st.markdown("""
+* **Disparidade Absoluta vs. Relativa:** A análise cartográfica revela dois padrões epidemiológicos distintos. Em termos absolutos, os maiores volumes de notificação concentram-se nas regiões Sudeste e Sul, reflexo da maior densidade populacional. Entretanto, ao ajustar pela população, estados do Norte — especialmente Roraima (66,5/100k) e Amazonas (45,0/100k) — emergem como os de maior incidência proporcional, superando estados mais populosos.
+* **Dupla Carga Epidemiológica:** Destaca-se o Rio Grande do Sul, que aparece em ambos os rankings: segundo maior volume absoluto (6,61k) e segunda maior incidência relativa (60,7/100k), configurando uma situação de dupla carga epidemiológica — alta densidade de casos e alta proporção por habitante — o que o torna um estado de atenção prioritária mesmo dentro de uma região com melhor infraestrutura de saúde.
+* **Vulnerabilidade e Políticas Públicas:** Esse contraste evidencia que a carga real da epidemia em gestantes HIV positivas é desproporcionalmente maior em regiões com menor infraestrutura de saúde, menor acesso a serviços e maior vulnerabilidade social. Isso reforça a necessidade de políticas regionalizadas que priorizem tanto o Norte do país quanto estados com alta incidência consolidada como o RS.
+    """)
 
 def render_bivariada(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
@@ -459,7 +473,12 @@ def render_bivariada(filtered_df, theme_key="light"):
 
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
-    st.markdown("**(Espaço reservado para documentação de insights dos Testes de Hipótese e Correlações)**")
+    st.markdown("""
+* **Diagnóstico e Planejamento Obstétrico:** A grande maioria das gestantes recebeu o diagnóstico de HIV antes do pré-natal em todas as faixas etárias (p = 0,007), sendo as jovens adultas (20–29 anos) o grupo com maior volume absoluto. Exceção relevante são as adolescentes, para quem o pré-natal funciona proporcionalmente mais como porta de entrada ao diagnóstico, reforçando seu papel estratégico nessa faixa etária. O diagnóstico prévio é condição essencial para o planejamento obstétrico adequado: gestantes acompanhadas apresentaram maior realização de cesárea eletiva, via indicada para HIV positivas com carga viral elevada ou desconhecida por reduzir o risco de transmissão vertical (BRASIL, 2022), enquanto a ausência de pré-natal associou-se a maior proporção de partos vaginais e cesáreas de urgência, evidenciando que o diagnóstico precoce e a vinculação ao pré-natal constituem intervenção direta na prevenção da transmissão vertical do HIV.
+
+**Referências:**
+* BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas para Prevenção da Transmissão Vertical do HIV, Sífilis e Hepatites Virais. Brasília: MS, 2022. Disponível em: https://bvsms.saude.gov.br/bvs/publicacoes/protocolo_clinico_hiv_sifilis_hepatites.pdf
+    """)
 
 def render_ia(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
@@ -756,9 +775,7 @@ def render_matriz(filtered_df, theme_key="light"):
     else:
         st.dataframe(filtered_df[cols_to_show].head(1000), use_container_width=True)
 
-    st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
-    st.markdown("**(Espaço reservado para documentação de insights sobre a Tabela de Microdados)**")
+
 
 def render_cascata(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
@@ -861,7 +878,10 @@ def render_cascata(filtered_df, theme_key="light"):
 
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
-    st.markdown("**(Espaço reservado para documentação de insights sobre a Cascata de Prevenção)**")
+    st.markdown("""
+* **Falha na Manutenção Longitudinal:** A cascata de prevenção evidencia uma perda progressiva e expressiva de gestantes a cada etapa do cuidado, em todas as regiões. Embora a adesão ao pré-natal seja relativamente homogênea entre as regiões (88,0% a 92,9%), a queda se acentua drasticamente nas etapas seguintes: a cobertura de TARV na gestação varia de 55,9% no Norte a 77,4% no Sul, e a taxa de ARV no momento ideal do parto despenca para apenas 34,1% no Norte e 36,7% no Nordeste — menos de metade das gestantes diagnosticadas.
+* **Gargalos do Sistema:** Esse padrão evidencia que o gargalo crítico não está no diagnóstico nem no pré-natal, mas na manutenção do tratamento antirretroviral ao longo da gestação, especialmente nas regiões Norte e Nordeste, onde as perdas são mais severas e os desafios de acesso e continuidade do cuidado são estruturalmente maiores.
+    """)
 
 def render_fontes(theme_key="light"):
     colors = THEMES[theme_key]
@@ -878,7 +898,7 @@ def render_fontes(theme_key="light"):
         <div style='background-color: {colors["background"]}; padding: 1.5rem; border-radius: 10px; border-left: 5px solid {colors["primary"]}; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: {colors["text_main"]};'>
             <h4 style='margin-top:0; display: flex; align-items: center;'><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: {colors["primary"]};">database</span> DATA SUS / SINAN</h4>
             <p>Sistema de Informação de Agravos de Notificação (SINAN). Base principal contendo microdados de notificações de HIV em gestantes no Brasil.</p>
-            <a href='https://datasus.saude.gov.br/' target='_blank' style='color: {colors["primary"]}; text-decoration: none; font-weight: bold;'>Acessar Portal DATASUS →</a>
+            <a href='https://datasus.saude.gov.br/transferencia-de-arquivos/' target='_blank' style='color: {colors["primary"]}; text-decoration: none; font-weight: bold;'>Acessar Portal DATASUS →</a>
         </div>
         """, unsafe_allow_html=True)
         

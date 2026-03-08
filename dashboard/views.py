@@ -23,28 +23,7 @@ def render_temporal(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
     st.markdown("### Dinâmica Temporal e Eficiência Regulatória")
     
-    # --- 1. Original Chart: Série Histórica Mensal (Acumulado) ---
-    st.markdown("**Série Histórica Mensal (Acumulado)**")
-    ts_original = filtered_df.resample("ME", on="dt_notific").size().reset_index(name="casos")
-    ts_original['Tendencia_MA6'] = ts_original['casos'].rolling(window=6).mean()
-    
-    fig_line = go.Figure()
-    fig_line.add_trace(go.Scatter(
-        x=ts_original['dt_notific'], y=ts_original['casos'], mode='lines', fill='tozeroy',
-        line=dict(width=3, color=colors['primary']),
-        fillcolor=colors['fill_color'], name="Casos Mensais"
-    ))
-    
-    fig_line.add_trace(go.Scatter(
-        x=ts_original['dt_notific'], y=ts_original['Tendencia_MA6'], mode='lines',
-        line=dict(width=2.5, color=colors['accent_red'], dash='dash'),
-        name="Tendência (Média 6M)"
-    ))
 
-    fig_line.update_layout(hovermode="x", xaxis_title="", yaxis_title="Volume", legend_title_text="")
-    st.plotly_chart(format_fig(fig_line, theme_name=theme_key, legend_horiz=True), use_container_width=True)
-    
-    st.divider()
 
     # --- 2. New Analysis: Tendência Limpa & Delay ---
     col1, col2 = st.columns([2, 1])
@@ -185,72 +164,7 @@ def render_demografico(filtered_df, theme_key="light"):
             fig_box = px.box(filtered_df, x='regiao', y='idade_anos', color='regiao', color_discrete_sequence=px.colors.qualitative.Safe)
             st.plotly_chart(format_fig(fig_box, theme_name=theme_key), use_container_width=True)
 
-    st.markdown("---")
-    st.markdown("### Perfil Social vs Acesso à Terapia Antirretroviral (TARV)")
-    st.info("Taxa de gestantes diagnosticadas que conseguiram efetivar a receita e utilizar profilaxia antirretroviral (TARV), filtradas por grupo.")
-    
-    # Pre-processing para Acesso a TARV
-    df_desig = filtered_df.copy()
-    if 'pre_antret' in df_desig.columns:
-        df_desig['pre_antret_num'] = pd.to_numeric(df_desig['pre_antret'], errors='coerce')
-        
-        c3, c4 = st.columns(2)
-        
-        with c3:
-            st.markdown("**Acesso por Grau de Escolaridade**")
-            # Filtrar escolaridades ignoradas
-            df_esc_desig = df_desig[df_desig['escolaridade'] != 'Ignorado'].dropna(subset=['escolaridade', 'pre_antret_num'])
-            if not df_esc_desig.empty:
-                tab_esc = pd.crosstab(df_esc_desig['escolaridade'], df_esc_desig['pre_antret_num'])
-                if 1 in tab_esc.columns:
-                    tab_esc['Taxa_Acesso_TARV (%)'] = (tab_esc[1] / tab_esc.sum(axis=1)) * 100
-                    tab_esc = tab_esc.reset_index()
-                    
-                    # Ordem lógica de escolaridade (de menor para maior, ou vice-versa, pro Plotly desenhar corretamente)
-                    ordem_esc_tarv = [
-                        'Sem instrução/escolaridade', 'Fundamental incompleto', 'Fundamental completo', 
-                        'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo'
-                    ]
-                    tab_esc['escolaridade'] = pd.Categorical(tab_esc['escolaridade'], categories=ordem_esc_tarv, ordered=True)
-                    tab_esc = tab_esc.sort_values(by='escolaridade', ascending=False) # Plotly empilha de baixo pra cima
-                    
-                    fig_esc_desig = px.bar(
-                        tab_esc, x='Taxa_Acesso_TARV (%)', y='escolaridade', orientation='h',
-                        text_auto='.1f', color='Taxa_Acesso_TARV (%)', color_continuous_scale='viridis_r',
-                        labels={'escolaridade': 'Escolaridade'}
-                    )
-                    fig_esc_desig.update_layout(coloraxis_showscale=False, xaxis_title="Gestantes Protegidas por TARV (%)", yaxis_title="")
-                    st.plotly_chart(format_fig(fig_esc_desig, theme_name=theme_key, legend_horiz=False), use_container_width=True)
-                else:
-                    st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
-                    
-        with c4:
-            st.markdown("**Acesso por Cor/Raça**")
-            df_raca_desig = df_desig[df_desig['raca'] != 'Ignorado'].dropna(subset=['raca', 'pre_antret_num'])
-            if not df_raca_desig.empty:
-                tab_raca = pd.crosstab(df_raca_desig['raca'], df_raca_desig['pre_antret_num'])
-                if 1 in tab_raca.columns:
-                    tab_raca['Taxa_Acesso_TARV (%)'] = (tab_raca[1] / tab_raca.sum(axis=1)) * 100
-                    
-                    # Aqui, como é raça, podemos ordenar quem tem mais acesso primeiro, não cronológico
-                    tab_raca = tab_raca.reset_index().sort_values(by='Taxa_Acesso_TARV (%)', ascending=True)
-                    
-                    fig_raca_desig = px.bar(
-                        tab_raca, x='Taxa_Acesso_TARV (%)', y='raca', orientation='h',
-                        text_auto='.1f', color='Taxa_Acesso_TARV (%)', color_continuous_scale='magma',
-                        labels={'raca': 'Raça/Cor'}
-                    )
-                    fig_raca_desig.update_layout(coloraxis_showscale=False, xaxis_title="Gestantes Protegidas por TARV (%)", yaxis_title="")
-                    st.plotly_chart(format_fig(fig_raca_desig, theme_name=theme_key, legend_horiz=False), use_container_width=True)
-                else:
-                    st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
 
-    st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
-    st.markdown("""
-* **Determinantes Sociais e Acesso à TARV:** Enquanto a adesão ao pré-natal mostrou variações modestas entre os grupos (~6%), o acesso à Terapia Antirretroviral (TARV) revelou desigualdades muito mais expressivas, com diferenças de até 20 pontos percentuais entre grupos raciais e 15 pontos entre níveis de escolaridade. Isso sugere que as barreiras de acesso ao tratamento são mais sensíveis aos determinantes sociais do que a adesão ao pré-natal em si, apontando para iniquidades estruturais no cuidado às gestantes HIV positivas no Brasil.
-* **Metas Globais de Erradicação:** O maior objetivo é que a taxa de realização de TARV atinja 95% para cumprir a meta global 95-95-95, que será alcançada quando 95% das pessoas vivendo com HIV conheçam o diagnóstico, 95% delas estejam em tratamento e 95% das tratadas alcancem supressão viral. A equalização no acesso medicamentoso é o passo crucial para esta conquista.
-    """)
 
 
 def render_cartografia(filtered_df, brazil_geojson, theme_key="light"):
@@ -376,42 +290,40 @@ def render_bivariada(filtered_df, theme_key="light"):
     st.markdown("### Correlações e Testes de Hipótese Clínicas")
     st.info("Testes de independência Qui-Quadrado (Chi-Squared) com significância de 5% (p < 0.05).")
     
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**Relação Idade x Pré-Natal**")
-        df_clean = filtered_df.dropna(subset=['idade_categoria', 'momento_diagnostico'])
-        df_clean = df_clean[(df_clean['idade_categoria'] != 'Ignorado') & (df_clean['momento_diagnostico'] != 'Ignorado')]
-        if not df_clean.empty:
-            tab = pd.crosstab(df_clean['idade_categoria'], df_clean['momento_diagnostico'])
-            chi2, p, dof, ex = chi2_contingency(tab)
-            df_plot = tab.reset_index().melt(id_vars='idade_categoria', var_name='Resposta', value_name='Freq')
-            palette1 = px.colors.qualitative.T10 if theme_key == "light" else px.colors.qualitative.Pastel
-            fig1 = px.bar(df_plot, x='idade_categoria', y='Freq', color='Resposta', barmode='group', color_discrete_sequence=palette1)
-            fig1.add_annotation(x=0, y=1.05, xref="paper", yref="paper", text=f"p-value = {p:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"), xanchor='left')
-            fig1.update_layout(margin=dict(t=50)) 
-            st.plotly_chart(format_fig(fig1, theme_name=theme_key), use_container_width=True)
-            
-    with c2:
-        st.markdown("**Relação Tipo de Parto x Pré-Natal (Proporcional)**")
-        df_clean2 = filtered_df.dropna(subset=['tipo_parto', 'momento_diagnostico']).copy()
+    st.markdown("**Relação Idade x Pré-Natal**")
+    df_clean = filtered_df.dropna(subset=['idade_categoria', 'momento_diagnostico'])
+    df_clean = df_clean[(df_clean['idade_categoria'] != 'Ignorado') & (df_clean['momento_diagnostico'] != 'Ignorado')]
+    if not df_clean.empty:
+        tab = pd.crosstab(df_clean['idade_categoria'], df_clean['momento_diagnostico'])
+        chi2, p, dof, ex = chi2_contingency(tab)
+        df_plot = tab.reset_index().melt(id_vars='idade_categoria', var_name='Resposta', value_name='Freq')
+        palette1 = px.colors.qualitative.T10 if theme_key == "light" else px.colors.qualitative.Pastel
+        fig1 = px.bar(df_plot, x='idade_categoria', y='Freq', color='Resposta', barmode='group', color_discrete_sequence=palette1)
+        fig1.add_annotation(x=0, y=1.05, xref="paper", yref="paper", text=f"p-value = {p:.4e}", showarrow=False, font=dict(color=colors['accent_red'], size=14, weight="bold"), xanchor='left')
+        fig1.update_layout(margin=dict(t=50)) 
+        st.plotly_chart(format_fig(fig1, theme_name=theme_key), use_container_width=True)
         
-        # Agrupar momentos de diagnóstico em categorias binárias de Pré-Natal
-        # 'Antes' e 'Durante' -> Realizou
-        # 'No parto' e 'Após' -> Não realizou
-        pn_map = {
-            'Antes Pré-Natal': 'Realizou Pré-Natal',
-            'Durante Pré-Natal': 'Realizou Pré-Natal',
-            'Durante o parto': 'Não realizou Pré-Natal',
-            'Após parto': 'Não realizou Pré-Natal'
-        }
-        df_clean2['status_pre_natal'] = df_clean2['momento_diagnostico'].map(pn_map)
+    st.markdown("**Relação Tipo de Parto x Pré-Natal (Proporcional)**")
+    # Usa a variável correta de Pré-Natal (pre_prenat onde 1=Sim, 2=Não) em vez de inferir do momento_diagnostico
+    df_clean2 = filtered_df.dropna(subset=['tipo_parto']).copy()
+    
+    if 'pre_prenat' in df_clean2.columns:
+        df_clean2['pre_prenat_num'] = pd.to_numeric(df_clean2['pre_prenat'], errors='coerce')
+        # Filtra apenas quem tem informação válida de Sim (1) ou Não (2)
+        df_clean2 = df_clean2[(df_clean2['pre_prenat_num'].isin([1, 2])) & (df_clean2['tipo_parto'] != 'Ignorado')]
         
-        # Remover 'Ignorado' e garantir que temos dados válidos
-        df_clean2 = df_clean2[df_clean2['status_pre_natal'].notna() & (df_clean2['tipo_parto'] != 'Ignorado')]
+        pn_map_real = {1: 'Realizou Pré-Natal', 2: 'Não realizou Pré-Natal'}
+        df_clean2['status_pre_natal'] = df_clean2['pre_prenat_num'].map(pn_map_real)
         
         if not df_clean2.empty:
             tab2 = pd.crosstab(df_clean2['status_pre_natal'], df_clean2['tipo_parto'])
-            chi2_2, p_2, dof_2, ex_2 = chi2_contingency(tab2)
+            
+            # Precisamos de pelo menos duas categorias de status e de parto para o Chi2
+            if tab2.shape[0] > 1 and tab2.shape[1] > 1:
+                chi2_2, p_2, dof_2, ex_2 = chi2_contingency(tab2)
+                p_text = f"p-value = {p_2:.4e}"
+            else:
+                p_text = "N/A"
             
             # Cálculo percentual por grupo de Pré-Natal
             pct_df = (tab2.div(tab2.sum(axis=1), axis=0) * 100).reset_index().melt(id_vars='status_pre_natal', value_name='Percentual')
@@ -435,41 +347,17 @@ def render_bivariada(filtered_df, theme_key="light"):
             
             fig2.add_annotation(
                 x=0, y=1.05, xref="paper", yref="paper", 
-                text=f"p-value = {p_2:.4e}", 
+                text=p_text, 
                 showarrow=False, 
                 font=dict(color=colors['accent_red'], size=14, weight="bold"), 
                 xanchor='left'
             )
             fig2.update_layout(margin=dict(t=50)) 
             st.plotly_chart(format_fig(fig2, theme_name=theme_key), use_container_width=True)
-
-    # Nova linha para o gráfico solicitado: Distribuição de Momento de Diagnóstico por Idade
-    st.markdown("**Distribuição de Momento de Diagnóstico por Idade**")
-    df_diag = filtered_df.dropna(subset=['idade_categoria', 'momento_diagnostico']).copy()
-    df_diag = df_diag[(df_diag['idade_categoria'] != 'Ignorado') & (df_diag['momento_diagnostico'] != 'Ignorado')]
-    
-    if not df_diag.empty:
-        # Definir ordem cronológica para o eixo X
-        diag_order = ['Antes Pré-Natal', 'Durante Pré-Natal', 'Durante o parto', 'Após parto']
-        
-        # Agrupar dados para o gráfico
-        df_diag_plot = df_diag.groupby(['momento_diagnostico', 'idade_categoria']).size().reset_index(name='Casos')
-        
-        fig3 = px.bar(
-            df_diag_plot, 
-            x='momento_diagnostico', 
-            y='Casos', 
-            color='idade_categoria', 
-            barmode='group',
-            category_orders={'momento_diagnostico': diag_order},
-            color_discrete_sequence=px.colors.qualitative.Set2 if theme_key == "light" else px.colors.qualitative.Pastel,
-            labels={
-                'momento_diagnostico': 'Momento do Diagnóstico',
-                'idade_categoria': 'Categoria de Idade',
-                'Casos': 'Número de Casos'
-            }
-        )
-        st.plotly_chart(format_fig(fig3, theme_name=theme_key, legend_horiz=True), use_container_width=True)
+        else:
+            st.warning("Sem dados suficientes cruzando Tipo de Parto com Pré-Natal válido.")
+    else:
+        st.warning("Variável de pré-natal não disponível.")
 
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
@@ -840,6 +728,119 @@ def render_cascata(filtered_df, theme_key="light"):
     # Ordenar as regiões e as etapas cronológicas
     df_cascata['Etapa de Prevenção'] = pd.Categorical(df_cascata['Etapa de Prevenção'], categories=fases_nomes, ordered=True)
     ordem_regioes = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
+
+    # --- NOVO BLOCO: Grau de Escolaridade Reportado vs Execução de Pré-natal (%) ---
+    st.markdown("---")
+    st.markdown("#### Taxa de Adesão ao Pré-Natal por Grau de Escolaridade")
+    
+    df_esc = df.copy()
+    
+    if 'pre_prenat' in df_esc.columns:
+        df_esc['pre_prenat_num_bin'] = pd.to_numeric(df_esc['pre_prenat'], errors='coerce')
+        df_esc = df_esc[df_esc['pre_prenat_num_bin'].isin([1, 2])]
+        df_esc_clean = df_esc[df_esc['escolaridade'] != 'Ignorado'].copy()
+        
+        if not df_esc_clean.empty:
+            df_esc_clean['fez_pre_natal'] = (df_esc_clean['pre_prenat_num_bin'] == 1).astype(int)
+            tab_esc = pd.crosstab(df_esc_clean['escolaridade'], df_esc_clean['fez_pre_natal'])
+            
+            if 1 in tab_esc.columns:
+                if 0 not in tab_esc.columns:
+                    tab_esc[0] = 0
+                
+                tab_esc['Taxa_Pre_Natal (%)'] = (tab_esc[1] / (tab_esc[0] + tab_esc[1])) * 100
+                tab_esc = tab_esc.reset_index()
+                
+                ordem_esc = [
+                    'Sem instrução/escolaridade', 'Fundamental incompleto', 'Fundamental completo', 
+                    'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo'
+                ]
+                tab_esc['escolaridade'] = pd.Categorical(tab_esc['escolaridade'], categories=ordem_esc, ordered=True)
+                tab_esc = tab_esc.sort_values(by='escolaridade', ascending=False)
+                
+                fig_esc = px.bar(
+                    tab_esc, x='Taxa_Pre_Natal (%)', y='escolaridade', orientation='h', 
+                    text_auto='.1f', color='Taxa_Pre_Natal (%)', 
+                    color_continuous_scale='Blues' if theme_key == "light" else 'Purples',
+                    labels={'escolaridade': 'Escolaridade'}
+                )
+                fig_esc.update_layout(coloraxis_showscale=False, xaxis_title="Fizeram Pré-Natal (%)", yaxis_title="")
+                st.plotly_chart(format_fig(fig_esc, theme_name=theme_key, legend_horiz=False), use_container_width=True)
+            else:
+                st.warning("Sem dados de pré-natal para este recorte nas escolaridades.")
+        else:
+            st.warning("Sem dados suficientes de escolaridade com status de pré-natal conhecido.")
+    else:
+        st.warning("Variável de pré-natal não disponível para análise cruzada de escolaridade.")
+
+    st.markdown("---")
+    st.markdown("### Perfil Social vs Acesso à Terapia Antirretroviral (TARV)")
+    st.info("Taxa de gestantes diagnosticadas que conseguiram efetivar a receita e utilizar profilaxia antirretroviral (TARV), filtradas por grupo.")
+    
+    # Pre-processing para Acesso a TARV
+    df_desig = filtered_df.copy()
+    if 'pre_antret' in df_desig.columns:
+        df_desig['pre_antret_num'] = pd.to_numeric(df_desig['pre_antret'], errors='coerce')
+        
+        c3, c4 = st.columns(2)
+        
+        with c3:
+            st.markdown("**Acesso por Grau de Escolaridade**")
+            # Filtrar escolaridades ignoradas
+            df_esc_desig = df_desig[df_desig['escolaridade'] != 'Ignorado'].dropna(subset=['escolaridade', 'pre_antret_num'])
+            if not df_esc_desig.empty:
+                tab_esc = pd.crosstab(df_esc_desig['escolaridade'], df_esc_desig['pre_antret_num'])
+                if 1 in tab_esc.columns:
+                    tab_esc['Taxa_Acesso_TARV (%)'] = (tab_esc[1] / tab_esc.sum(axis=1)) * 100
+                    tab_esc = tab_esc.reset_index()
+                    
+                    # Ordem lógica de escolaridade (de menor para maior, ou vice-versa, pro Plotly desenhar corretamente)
+                    ordem_esc_tarv = [
+                        'Sem instrução/escolaridade', 'Fundamental incompleto', 'Fundamental completo', 
+                        'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo'
+                    ]
+                    tab_esc['escolaridade'] = pd.Categorical(tab_esc['escolaridade'], categories=ordem_esc_tarv, ordered=True)
+                    tab_esc = tab_esc.sort_values(by='escolaridade', ascending=False) # Plotly empilha de baixo pra cima
+                    
+                    fig_esc_desig = px.bar(
+                        tab_esc, x='Taxa_Acesso_TARV (%)', y='escolaridade', orientation='h',
+                        text_auto='.1f', color='Taxa_Acesso_TARV (%)', color_continuous_scale='viridis_r',
+                        labels={'escolaridade': 'Escolaridade'}
+                    )
+                    fig_esc_desig.update_layout(coloraxis_showscale=False, xaxis_title="Gestantes Protegidas por TARV (%)", yaxis_title="")
+                    st.plotly_chart(format_fig(fig_esc_desig, theme_name=theme_key, legend_horiz=False), use_container_width=True)
+                else:
+                    st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
+                    
+        with c4:
+            st.markdown("**Acesso por Cor/Raça**")
+            df_raca_desig = df_desig[df_desig['raca'] != 'Ignorado'].dropna(subset=['raca', 'pre_antret_num'])
+            if not df_raca_desig.empty:
+                tab_raca = pd.crosstab(df_raca_desig['raca'], df_raca_desig['pre_antret_num'])
+                if 1 in tab_raca.columns:
+                    tab_raca['Taxa_Acesso_TARV (%)'] = (tab_raca[1] / tab_raca.sum(axis=1)) * 100
+                    
+                    # Aqui, como é raça, podemos ordenar quem tem mais acesso primeiro, não cronológico
+                    tab_raca = tab_raca.reset_index().sort_values(by='Taxa_Acesso_TARV (%)', ascending=True)
+                    
+                    fig_raca_desig = px.bar(
+                        tab_raca, x='Taxa_Acesso_TARV (%)', y='raca', orientation='h',
+                        text_auto='.1f', color='Taxa_Acesso_TARV (%)', color_continuous_scale='magma',
+                        labels={'raca': 'Raça/Cor'}
+                    )
+                    fig_raca_desig.update_layout(coloraxis_showscale=False, xaxis_title="Gestantes Protegidas por TARV (%)", yaxis_title="")
+                    st.plotly_chart(format_fig(fig_raca_desig, theme_name=theme_key, legend_horiz=False), use_container_width=True)
+                else:
+                    st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
+
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("""
+* **Determinantes Sociais e Acesso à TARV:** Enquanto a adesão ao pré-natal mostrou variações modestas entre os grupos (~6%), o acesso à Terapia Antirretroviral (TARV) revelou desigualdades muito mais expressivas, com diferenças de até 20 pontos percentuais entre grupos raciais e 15 pontos entre níveis de escolaridade. Isso sugere que as barreiras de acesso ao tratamento são mais sensíveis aos determinantes sociais do que a adesão ao pré-natal em si, apontando para iniquidades estruturais no cuidado às gestantes HIV positivas no Brasil.
+* **Metas Globais de Erradicação:** O maior objetivo é que a taxa de realização de TARV atinja 95% para cumprir a meta global 95-95-95, que será alcançada quando 95% das pessoas vivendo com HIV conheçam o diagnóstico, 95% delas estejam em tratamento e 95% das tratadas alcancem supressão viral. A equalização no acesso medicamentoso é o passo crucial para esta conquista.
+    """)
+    st.markdown("---")
+
     
     # O Plotly constrói o funil
     fig = px.funnel(

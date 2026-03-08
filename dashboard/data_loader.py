@@ -38,11 +38,22 @@ def load_data():
     if 'cs_raca' in df.columns:
         df['raca'] = df['cs_raca'].map(raca_map).fillna('Ignorado')
     
-    escol_map = {0: 'Sem Escolaridade', 1: 'Fund. I', 2: 'Fund. II', 3: 'Fund. II', 4: 'Fund. Comp.', 5: 'Med. Incomp.', 6: 'Med. Comp.', 7: 'Sup. Incomp.', 8: 'Sup. Comp.', 9: 'Ignorado'}
+    escol_map = {
+        0: 'Sem instrução/escolaridade', 
+        1: 'Fundamental incompleto', 
+        2: 'Fundamental incompleto', 
+        3: 'Fundamental incompleto', 
+        4: 'Fundamental completo', 
+        5: 'Médio incompleto', 
+        6: 'Médio completo', 
+        7: 'Superior incompleto', 
+        8: 'Superior completo', 
+        9: 'Ignorado'
+    }
     if 'cs_escol_n' in df.columns:
         df['escolaridade'] = df['cs_escol_n'].map(escol_map).fillna('Ignorado')
     
-    diag_map = {1: 'Pré-natal', 2: 'Parto', 3: 'Pós-parto', 4: 'Sem pré-natal', 9: 'Ignorado'}
+    diag_map = {1: 'Antes Pré-Natal', 2: 'Durante Pré-Natal', 3: 'Durante o parto', 4: 'Após parto', 9: 'Ignorado'}
     if 'pre_prenat' in df.columns:
         df['momento_diagnostico'] = df['pre_prenat'].map(diag_map).fillna('Ignorado')
 
@@ -57,8 +68,8 @@ def load_data():
         df['idade_anos'] = df['nu_idade_n'].apply(lambda x: x-4000 if x >= 4000 else x)
         df.loc[(df['idade_anos'] < 10) | (df['idade_anos'] > 55), 'idade_anos'] = np.nan
         
-        bins = [10, 19, 29, 39, 55]
-        labels = ['Adolescente (10-19)', 'Jovem (20-29)', 'Adulta (30-39)', 'Sênior (40+)']
+        bins = [10, 19, 29, 39, 100] # 100 to ensure we catch all up to 55+
+        labels = ['Adolescente (10 - 19 anos)', 'Jovem Adulta (20 - 29 anos)', 'Adulta (30 - 39 anos)', 'Adulta (acima de 40)']
         df['idade_categoria'] = pd.cut(df['idade_anos'], bins=bins, labels=labels)
 
     uf_map = {

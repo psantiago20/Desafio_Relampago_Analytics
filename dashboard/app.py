@@ -14,7 +14,8 @@ from views import (
     render_bivariada, 
     render_ia, 
     render_matriz,
-    render_cascata
+    render_cascata,
+    render_fontes
 )
 
 # Suppress pandas FutureWarnings for clean console
@@ -23,7 +24,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # ---------------- 1. PAGE SETUP ---------------- #
 st.set_page_config(
     page_title="Vigilância Epidemiológica: HIV em Gestantes",
-    page_icon="🧬",
+    page_icon="https://www.gov.br/favicon.ico", # Usando um ícone oficial ou similar, ou apenas removendo o emoji
     layout="wide",
 )
 
@@ -52,14 +53,15 @@ st.markdown(
 render_kpis(filtered_df, ano_sel)
 
 # ---------------- 6. TABS RENDERING ---------------- #
-t1, t2, t3, t7, t4, t5, t6 = st.tabs([
+t1, t2, t3, t7, t4, t5, t6, t8 = st.tabs([
     "Evolução Temporal", 
     "Perfil Social", 
     "Cartografia", 
     "Adesão a Pré-natal",
     "Estatística Bivariada", 
     "Inteligência Artificial", 
-    "Matriz Bruta"
+    "Matriz Bruta",
+    "Fontes"
 ])
 
 with t1: render_temporal(filtered_df, theme_key)
@@ -69,6 +71,7 @@ with t7: render_cascata(filtered_df, theme_key)
 with t4: render_bivariada(filtered_df, theme_key)
 with t5: render_ia(filtered_df, theme_key)
 with t6: render_matriz(filtered_df, theme_key)
+with t8: render_fontes(theme_key)
 
 st.markdown("---")
 st.caption("Base: SINAN/MS | Projeto Científico e Institucional Interativo")

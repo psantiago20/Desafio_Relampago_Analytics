@@ -53,8 +53,8 @@ def render_kpi_card(label, value, icon, delta=None, delta_type="up"):
     delta_html = ""
     if delta:
         cls = "delta-up" if delta_type == "up" else "delta-down"
-        arrow = "↑" if delta_type == "up" else "↓"
-        delta_html = f'<span class="kpi-delta {cls}">{arrow} {delta}</span>'
+        arrow_icon = "trending_up" if delta_type == "up" else "trending_down"
+        delta_html = f'<span class="kpi-delta {cls}"><span class="material-symbols-outlined" style="font-size: 0.9rem; vertical-align: middle;">{arrow_icon}</span> {delta}</span>'
 
     # Layout: Icon and Label in Header, Value Below
     card_html = (

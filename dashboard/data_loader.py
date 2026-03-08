@@ -32,6 +32,7 @@ def load_data():
             
     df = df.dropna(subset=["dt_notific"])
     df["ano_notific"] = df["dt_notific"].dt.year
+    df["mes_notificacao"] = df["dt_notific"].dt.month
     df = df[df["ano_notific"] <= 2023]
     
     raca_map = {1: 'Branca', 2: 'Preta', 3: 'Amarela', 4: 'Parda', 5: 'Indígena', 9: 'Ignorado'}
@@ -65,12 +66,13 @@ def load_data():
         df['atraso_dias'] = (df['dt_notific'] - pd.to_datetime(df['dt_diag'], errors='coerce')).dt.days
 
     if 'nu_idade_n' in df.columns:
-        df['idade_anos'] = df['nu_idade_n'].apply(lambda x: x-4000 if x >= 4000 else x)
-        df.loc[(df['idade_anos'] < 10) | (df['idade_anos'] > 55), 'idade_anos'] = np.nan
+        df['idade_real'] = df['nu_idade_n'].apply(lambda x: x-4000 if (x is not None and x >= 4000) else x)
+        df.loc[(df['idade_real'] < 10) | (df['idade_real'] > 55), 'idade_real'] = np.nan
+        df['idade_anos'] = df['idade_real'] # Keep compatibility for other charts
         
         bins = [10, 19, 29, 39, 100] # 100 to ensure we catch all up to 55+
         labels = ['Adolescente (10 - 19 anos)', 'Jovem Adulta (20 - 29 anos)', 'Adulta (30 - 39 anos)', 'Adulta (acima de 40)']
-        df['idade_categoria'] = pd.cut(df['idade_anos'], bins=bins, labels=labels)
+        df['idade_categoria'] = pd.cut(df['idade_real'], bins=bins, labels=labels)
 
     uf_map = {
         11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO',
@@ -92,5 +94,28 @@ def load_data():
     uf_to_reg = {uf: reg for reg, ufs in regioes.items() for uf in ufs}
     if 'uf' in df.columns:
         df['regiao'] = df['uf'].map(uf_to_reg).fillna('Ignorado')
+        
+        # IDH por Região (Valores aproximados baseados em dados recentes do PNUD)
+        idh_map = {
+            'Norte': 0.730,
+            'Nordeste': 0.710,
+            'Centro-Oeste': 0.789,
+            'Sudeste': 0.796,
+            'Sul': 0.792,
+            'Ignorado': 0.750 # Valor médio do país como fallback
+        }
+        df['idh_regiao'] = df['regiao'].map(idh_map)
+
+    # Cálculo da Taxa de Incidência por UF (per 100k habitantes)
+    populacao_ibge = {
+        'SP': 44411238, 'MG': 20538718, 'RJ': 16054524, 'BA': 14141626, 'PR': 11444380,
+        'RS': 10882965, 'PE': 9058931, 'CE': 8733687, 'PA': 8120131, 'SC': 7610361,
+        'GO': 7056495, 'MA': 6775805, 'PB': 3974687, 'AM': 3941613, 'ES': 3833712,
+        'MT': 3658649, 'RN': 3302729, 'PI': 3271199, 'AL': 3127683, 'DF': 2817381,
+        'MS': 2757013, 'SE': 2209558, 'RO': 1581196, 'TO': 1511460, 'AC': 830018,
+        'AP': 733759, 'RR': 636303
+    }
+    casos_uf = df['uf'].value_counts().to_dict()
+    df['taxa_incidencia'] = df['uf'].apply(lambda x: (casos_uf.get(x, 0) / populacao_ibge.get(x, 1)) * 100000 if x in populacao_ibge else 0)
 
     return df

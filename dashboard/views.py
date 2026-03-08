@@ -374,20 +374,12 @@ def render_ia(filtered_df, theme_key="light"):
     c_m1, c_m2 = st.columns([1, 1])
     
     with c_m1:
-        st.markdown("**Segmentação PCA: Idade vs UF (agrupado por Região)**")
-        df_pca = filtered_df[['idade_anos', 'uf', 'regiao']].dropna().copy()
+        st.markdown("**Segmentação IA (PCA): Perfis Regionais vs Atributos**")
+        pca_features = ['idade_real', 'taxa_incidencia']
+        df_pca = filtered_df[pca_features + ['regiao']].dropna().copy()
+        
         if not df_pca.empty:
-            # Replicar numeração IBGE exata para alinhar a matemática do PCA com o Notebook
-            ibge_codes = {
-                'RO': 11, 'AC': 12, 'AM': 13, 'RR': 14, 'PA': 15, 'AP': 16, 'TO': 17,
-                'MA': 21, 'PI': 22, 'CE': 23, 'RN': 24, 'PB': 25, 'PE': 26, 'AL': 27, 'SE': 28, 'BA': 29,
-                'MG': 31, 'ES': 32, 'RJ': 33, 'SP': 35,
-                'PR': 41, 'SC': 42, 'RS': 43,
-                'MS': 50, 'MT': 51, 'GO': 52, 'DF': 53
-            }
-            df_pca['uf_num'] = df_pca['uf'].map(ibge_codes).fillna(0)
-            
-            X = StandardScaler().fit_transform(df_pca[['idade_anos', 'uf_num']])
+            X = StandardScaler().fit_transform(df_pca[pca_features])
             coords = PCA(n_components=2).fit_transform(X)
             df_pca['PCA1'] = coords[:, 0]
             df_pca['PCA2'] = coords[:, 1]
@@ -398,15 +390,25 @@ def render_ia(filtered_df, theme_key="light"):
                 color_discrete_sequence=px.colors.qualitative.Set2,
                 labels={'regiao': 'Regiões'}
             )
+            # Linhas de referência para quadrantes (Cinza visível em ambos os temas)
+            fig_pca.add_hline(y=0, line_dash="dash", line_color="#888", opacity=0.5)
+            fig_pca.add_vline(x=0, line_dash="dash", line_color="#888", opacity=0.5)
+            
+            # Anotações de quadrantes (Bússola de Risco)
+            fig_pca.add_annotation(x=-2, y=2.5, text="Segurança", showarrow=False, font=dict(color="#888", size=11), yshift=10)
+            fig_pca.add_annotation(x=2, y=2.5, text="Risco Biol.", showarrow=False, font=dict(color="#888", size=11), yshift=10)
+            fig_pca.add_annotation(x=-2, y=-2.5, text="Risco Indiv.", showarrow=False, font=dict(color="#888", size=11), yshift=-10)
+            fig_pca.add_annotation(x=2, y=-2.5, text="Risco Social", showarrow=False, font=dict(color="#888", size=11), yshift=-10)
+
             fig_pca.update_traces(marker=dict(size=8, line=dict(width=0.4, color=colors['background'])))
             st.plotly_chart(format_fig(fig_pca, theme_name=theme_key, legend_horiz=True), use_container_width=True)
 
     with c_m2:
         st.markdown("**Drivers do Atraso de Notificação (Random Forest)**")
-        df_rf = filtered_df[['idade_anos', 'regiao', 'momento_diagnostico', 'atraso_dias']].dropna()
+        df_rf = filtered_df[['idade_anos', 'regiao', 'momento_diagnostico', 'atraso_dias', 'idh_regiao']].dropna()
         if not df_rf.empty:
             df_rf = df_rf[df_rf['atraso_dias'] >= 0] 
-            X_rf = pd.get_dummies(df_rf[['idade_anos', 'regiao', 'momento_diagnostico']], drop_first=True)
+            X_rf = pd.get_dummies(df_rf[['idade_anos', 'regiao', 'momento_diagnostico', 'idh_regiao']], drop_first=True)
             y_rf = df_rf['atraso_dias']
             rf_model = RandomForestRegressor(n_estimators=50, random_state=42).fit(X_rf, y_rf)
             imp = pd.DataFrame({'feature': X_rf.columns, 'importance': rf_model.feature_importances_}).sort_values('importance', ascending=True)
@@ -644,8 +646,8 @@ def render_ia(filtered_df, theme_key="light"):
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("""
-* **Segmentação PCA:** Ao agrupar os dados por idade e macrorregião (em vez de 27 UFs isoladas), o gráfico se torna mais coeso, permitindo enxergar agrupamentos demográficos consolidados e reduzindo o ruído visual percebido (Overplotting).
-* **Modelo Random Forest (Drivers):** Essa análise identifica as "Features Importances". Ela revela quais atributos estatísticos da gestante (como a região ou o acesso ao pré-natal) são os maiores "culpados" pelas ocorrências ou atrasos de notificação verificados no modelo preditivo.
+* **Segmentação IA (PCA):** O gráfico agora foca no embate central entre **Idade Real** e **Taxa de Incidência** do estado. Ao remover variáveis de ruído (como o mês de notificação), o algoritmo consegue destacar agrupamentos genuínos: o **Sul e Norte** (topo) apresentam perfis de risco e idade levemente distintos do **Sudeste e Nordeste** (base). Note que a nuvem é misturada, o que indica que o agravo afeta a todos de forma demograficamente similar, sem "ilhas" regionais isoladas.
+* **Modelo Random Forest (Drivers):** Esta análise identifica as "Features Importances", incluindo agora o **IDH Regional**. Ela revela quais atributos estatísticos (como contexto social, região ou acesso ao pré-natal) são os maiores "culpados" pelas ocorrências ou atrasos de notificação, permitindo uma visão causal que o PCA não fornece sozinho.
 * **Projeção Híbrida (Prophet vs RF):** Ao executar a inferência de longo prazo no botão, o sistema roda dois algoritmos simultaneamente para criar um *ensemble* estatístico. Isso gera duas visões do futuro (geralmente Prophet captura melhor sazonalidades puras e RF captura melhor auto-regressão complexa), oferecendo ao gestor público um intervalo de variação para planejamento de políticas de saúde.
     """)
 

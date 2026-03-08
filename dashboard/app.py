@@ -53,12 +53,12 @@ st.markdown(
 render_kpis(filtered_df, ano_sel)
 
 # ---------------- 6. TABS RENDERING ---------------- #
-t1, t2, t3, t7, t4, t5, t6, t8 = st.tabs([
+t1, t2, t3, t4, t7, t5, t6, t8 = st.tabs([
     "Evolução Temporal", 
     "Perfil Social", 
     "Cartografia", 
+    "Correlações Clínicas",
     "Adesão a Pré-natal",
-    "Estatística Bivariada", 
     "Inteligência Artificial", 
     "Matriz Bruta",
     "Fontes"
@@ -67,8 +67,8 @@ t1, t2, t3, t7, t4, t5, t6, t8 = st.tabs([
 with t1: render_temporal(filtered_df, theme_key)
 with t2: render_demografico(filtered_df, theme_key)
 with t3: render_cartografia(filtered_df, brazil_geojson, theme_key)
-with t7: render_cascata(filtered_df, theme_key)
 with t4: render_bivariada(filtered_df, theme_key)
+with t7: render_cascata(filtered_df, theme_key)
 with t5: render_ia(filtered_df, theme_key)
 with t6: render_matriz(filtered_df, theme_key)
 with t8: render_fontes(theme_key)

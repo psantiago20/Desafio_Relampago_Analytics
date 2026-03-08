@@ -22,29 +22,75 @@ except ImportError:
 def render_temporal(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
     st.markdown("### Dinâmica Temporal e Eficiência Regulatória")
+    
+    # --- 1. Original Chart: Série Histórica Mensal (Acumulado) ---
+    st.markdown("**Série Histórica Mensal (Acumulado)**")
+    ts_original = filtered_df.resample("ME", on="dt_notific").size().reset_index(name="casos")
+    ts_original['Tendencia_MA6'] = ts_original['casos'].rolling(window=6).mean()
+    
+    fig_line = go.Figure()
+    fig_line.add_trace(go.Scatter(
+        x=ts_original['dt_notific'], y=ts_original['casos'], mode='lines', fill='tozeroy',
+        line=dict(width=3, color=colors['primary']),
+        fillcolor=colors['fill_color'], name="Casos Mensais"
+    ))
+    
+    fig_line.add_trace(go.Scatter(
+        x=ts_original['dt_notific'], y=ts_original['Tendencia_MA6'], mode='lines',
+        line=dict(width=2.5, color=colors['accent_red'], dash='dash'),
+        name="Tendência (Média 6M)"
+    ))
+
+    fig_line.update_layout(hovermode="x", xaxis_title="", yaxis_title="Volume", legend_title_text="")
+    st.plotly_chart(format_fig(fig_line, theme_name=theme_key, legend_horiz=True), use_container_width=True)
+    
+    st.divider()
+
+    # --- 2. New Analysis: Tendência Limpa & Delay ---
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("**Série Histórica Mensal (Acumulado)**")
-        ts = filtered_df.resample("ME", on="dt_notific").size().reset_index(name="casos")
-        ts['Tendencia_MA6'] = ts['casos'].rolling(window=6).mean()
+        st.markdown("**Tendência de Notificações (Série Limpa Post-2018)**")
         
-        fig_line = go.Figure()
-        fig_line.add_trace(go.Scatter(
-            x=ts['dt_notific'], y=ts['casos'], mode='lines', fill='tozeroy',
-            line=dict(width=3, color=colors['primary']),
-            fillcolor=colors['fill_color'], name="Casos Mensais"
+        # Data Processing for Trend Analysis
+        ts = filtered_df.resample("ME", on="dt_notific").size().reset_index(name="y")
+        ts.columns = ['ds', 'y']
+        
+        if not ts.empty:
+            ultima_data_real = ts['ds'].max()
+            ts_limpa = ts[ts['ds'] < ultima_data_real].copy()
+            ts_limpa = ts_limpa[ts_limpa['ds'] > '2017-12-31']
+            ts_limpa['MA30'] = ts_limpa['y'].rolling(window=30).mean()
+            crescimento_anual = ts_limpa.resample('Y', on='ds')['y'].sum().pct_change() * 100
+        else:
+            ts_limpa = ts.copy()
+            crescimento_anual = pd.Series()
+
+        fig_trend = go.Figure()
+        fig_trend.add_trace(go.Scatter(
+            x=ts_limpa['ds'], y=ts_limpa['y'], mode='lines',
+            line=dict(width=1, color=colors['text_muted']),
+            opacity=0.4, name="Real (DBC Data)"
         ))
-        
-        fig_line.add_trace(go.Scatter(
-            x=ts['dt_notific'], y=ts['Tendencia_MA6'], mode='lines',
-            line=dict(width=2.5, color=colors['accent_red'], dash='dash'),
-            name="Tendência (Média 6M)"
+        fig_trend.add_trace(go.Scatter(
+            x=ts_limpa['ds'], y=ts_limpa['MA30'], mode='lines',
+            line=dict(width=4, color=colors['accent_red']),
+            name="Tendência Limpa (MA30)"
         ))
 
-        fig_line.update_layout(hovermode="x", xaxis_title="", yaxis_title="Volume", legend_title_text="")
-        st.plotly_chart(format_fig(fig_line, theme_name=theme_key, legend_horiz=True), use_container_width=True)
+        fig_trend.update_layout(
+            hovermode="x", xaxis_title="", yaxis_title="Volume", 
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(format_fig(fig_trend, theme_name=theme_key, legend_horiz=True), use_container_width=True)
         
+        if not crescimento_anual.dropna().empty:
+            st.markdown("**Crescimento Anual (%)**")
+            cols_anos = st.columns(len(crescimento_anual.dropna()))
+            for i, (ano, valor) in enumerate(crescimento_anual.dropna().items()):
+                with cols_anos[i]:
+                    st.metric(label=f"{ano.year}", value=f"{valor:+.1f}%")
+
     with col2:
         st.markdown("**Frequência de Delay (Notificação)**")
         if 'atraso_dias' in filtered_df.columns:
@@ -57,8 +103,34 @@ def render_temporal(filtered_df, theme_key="light"):
                                    annotation_font_color=colors['text_main'], annotation_font_weight="bold")
                 st.plotly_chart(format_fig(fig_hist, theme_name=theme_key, legend_horiz=False), use_container_width=True)
 
+    st.divider()
+
+    # --- 3. Regional Annual Trends ---
+    st.markdown("**Casos Totais de HIV em Gestantes por Região e Ano**")
+    df_regiao = filtered_df[filtered_df['regiao'] != 'Ignorado'].copy()
+    if not df_regiao.empty:
+        # Aggregating by year and region
+        df_agrupado = df_regiao.groupby(['ano_notific', 'regiao']).size().reset_index(name='casos_totais')
+        
+        fig_reg = px.line(
+            df_agrupado, x='ano_notific', y='casos_totais', color='regiao',
+            line_shape='linear', render_mode='svg',
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            labels={'ano_notific': 'Ano', 'casos_totais': 'Casos Totais', 'regiao': 'Região'}
+        )
+        fig_reg.update_traces(mode='lines+markers', line=dict(width=3), marker=dict(size=8))
+        fig_reg.update_layout(hovermode="x unified", xaxis=dict(dtick=1))
+        st.plotly_chart(format_fig(fig_reg, theme_name=theme_key, legend_horiz=True), use_container_width=True)
+
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    
+    if not ts_limpa['MA30'].dropna().empty:
+        last_ma = ts_limpa['MA30'].iloc[-1]
+        prev_ma = ts_limpa['MA30'].iloc[-2] if len(ts_limpa['MA30']) > 1 else last_ma
+        direction = "alta" if last_ma > prev_ma else "queda"
+        st.markdown(f"* **Análise de Tendência:** A média móvel de 30 meses (MA30) indica uma tendência de **{direction}** no volume de notificações recentes.")
+    
     st.markdown("**(Espaço reservado para documentação de insights da Dinâmica Temporal)**")
 
 def render_demografico(filtered_df, theme_key="light"):
@@ -83,9 +155,22 @@ def render_demografico(filtered_df, theme_key="light"):
             
     with c2:
         st.markdown("**Grau de Escolaridade Reportado**")
-        df_esc = filtered_df['escolaridade'].value_counts().reset_index()
-        fig_esc = px.bar(df_esc, x='count', y='escolaridade', orientation='h', color='count', color_continuous_scale='Blues' if theme_key == "light" else 'Purples')
-        fig_esc.update_layout(coloraxis_showscale=False)
+        df_esc_count = filtered_df['escolaridade'].value_counts().reset_index()
+        df_esc_count.columns = ['escolaridade', 'count']
+        
+        # Enforcing Order
+        ordem_esc = [
+            'Sem instrução/escolaridade', 'Fundamental incompleto', 'Fundamental completo', 
+            'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo'
+        ]
+        df_esc_count['escolaridade'] = pd.Categorical(df_esc_count['escolaridade'], categories=ordem_esc, ordered=True)
+        df_esc_count = df_esc_count.sort_values('escolaridade', ascending=False)
+        
+        fig_esc = px.bar(
+            df_esc_count, x='count', y='escolaridade', orientation='h', 
+            color='count', color_continuous_scale='Blues' if theme_key == "light" else 'Purples'
+        )
+        fig_esc.update_layout(coloraxis_showscale=False, yaxis_title="")
         st.plotly_chart(format_fig(fig_esc, theme_name=theme_key, legend_horiz=False), use_container_width=True)
 
         st.markdown("**Dispersão Etária por Região**")
@@ -115,8 +200,11 @@ def render_demografico(filtered_df, theme_key="light"):
                     tab_esc = tab_esc.reset_index()
                     
                     # Ordem lógica de escolaridade (de menor para maior, ou vice-versa, pro Plotly desenhar corretamente)
-                    ordem_esc = ['Sem Escolaridade', 'Fund. I', 'Fund. II', 'Fund. Comp.', 'Med. Incomp.', 'Med. Comp.', 'Sup. Incomp.', 'Sup. Comp.']
-                    tab_esc['escolaridade'] = pd.Categorical(tab_esc['escolaridade'], categories=ordem_esc, ordered=True)
+                    ordem_esc_tarv = [
+                        'Sem instrução/escolaridade', 'Fundamental incompleto', 'Fundamental completo', 
+                        'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo'
+                    ]
+                    tab_esc['escolaridade'] = pd.Categorical(tab_esc['escolaridade'], categories=ordem_esc_tarv, ordered=True)
                     tab_esc = tab_esc.sort_values(by='escolaridade', ascending=False) # Plotly empilha de baixo pra cima
                     
                     fig_esc_desig = px.bar(
@@ -294,13 +382,13 @@ def render_bivariada(filtered_df, theme_key="light"):
         df_clean2 = filtered_df.dropna(subset=['tipo_parto', 'momento_diagnostico']).copy()
         
         # Agrupar momentos de diagnóstico em categorias binárias de Pré-Natal
-        # 'Pré-natal' (1) -> Realizou
-        # 'Sem pré-natal' (4), 'Parto' (2), 'Pós-parto' (3) -> Não realizou
+        # 'Antes' e 'Durante' -> Realizou
+        # 'No parto' e 'Após' -> Não realizou
         pn_map = {
-            'Pré-natal': 'Realizou Pré-Natal',
-            'Sem pré-natal': 'Não realizou Pré-Natal',
-            'Parto': 'Não realizou Pré-Natal',
-            'Pós-parto': 'Não realizou Pré-Natal'
+            'Antes Pré-Natal': 'Realizou Pré-Natal',
+            'Durante Pré-Natal': 'Realizou Pré-Natal',
+            'Durante o parto': 'Não realizou Pré-Natal',
+            'Após parto': 'Não realizou Pré-Natal'
         }
         df_clean2['status_pre_natal'] = df_clean2['momento_diagnostico'].map(pn_map)
         
@@ -340,6 +428,34 @@ def render_bivariada(filtered_df, theme_key="light"):
             )
             fig2.update_layout(margin=dict(t=50)) 
             st.plotly_chart(format_fig(fig2, theme_name=theme_key), use_container_width=True)
+
+    # Nova linha para o gráfico solicitado: Distribuição de Momento de Diagnóstico por Idade
+    st.markdown("**Distribuição de Momento de Diagnóstico por Idade**")
+    df_diag = filtered_df.dropna(subset=['idade_categoria', 'momento_diagnostico']).copy()
+    df_diag = df_diag[(df_diag['idade_categoria'] != 'Ignorado') & (df_diag['momento_diagnostico'] != 'Ignorado')]
+    
+    if not df_diag.empty:
+        # Definir ordem cronológica para o eixo X
+        diag_order = ['Antes Pré-Natal', 'Durante Pré-Natal', 'Durante o parto', 'Após parto']
+        
+        # Agrupar dados para o gráfico
+        df_diag_plot = df_diag.groupby(['momento_diagnostico', 'idade_categoria']).size().reset_index(name='Casos')
+        
+        fig3 = px.bar(
+            df_diag_plot, 
+            x='momento_diagnostico', 
+            y='Casos', 
+            color='idade_categoria', 
+            barmode='group',
+            category_orders={'momento_diagnostico': diag_order},
+            color_discrete_sequence=px.colors.qualitative.Set2 if theme_key == "light" else px.colors.qualitative.Pastel,
+            labels={
+                'momento_diagnostico': 'Momento do Diagnóstico',
+                'idade_categoria': 'Categoria de Idade',
+                'Casos': 'Número de Casos'
+            }
+        )
+        st.plotly_chart(format_fig(fig3, theme_name=theme_key, legend_horiz=True), use_container_width=True)
 
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
@@ -746,3 +862,54 @@ def render_cascata(filtered_df, theme_key="light"):
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("**(Espaço reservado para documentação de insights sobre a Cascata de Prevenção)**")
+
+def render_fontes(theme_key="light"):
+    colors = THEMES[theme_key]
+    st.markdown("### Documentação e Fontes de Dados")
+    st.markdown("""
+    Esta plataforma consolida informações de múltiplas bases oficiais e processamentos científicos. 
+    Abaixo estão as referências principais utilizadas no projeto.
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div style='background-color: {colors["background"]}; padding: 1.5rem; border-radius: 10px; border-left: 5px solid {colors["primary"]}; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: {colors["text_main"]};'>
+            <h4 style='margin-top:0; display: flex; align-items: center;'><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: {colors["primary"]};">database</span> DATA SUS / SINAN</h4>
+            <p>Sistema de Informação de Agravos de Notificação (SINAN). Base principal contendo microdados de notificações de HIV em gestantes no Brasil.</p>
+            <a href='https://datasus.saude.gov.br/' target='_blank' style='color: {colors["primary"]}; text-decoration: none; font-weight: bold;'>Acessar Portal DATASUS →</a>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.write("")
+        
+        st.markdown(f"""
+        <div style='background-color: {colors["background"]}; padding: 1.5rem; border-radius: 10px; border-left: 5px solid {colors["accent_green"]}; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: {colors["text_main"]};'>
+            <h4 style='margin-top:0; display: flex; align-items: center;'><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: {colors["accent_green"]};">query_stats</span> IBGE</h4>
+            <p>Instituto Brasileiro de Geografia e Estatística. Utilizado para dados de projeção populacional e cartografia (JSON/GeoJSON).</p>
+            <a href='https://www.ibge.gov.br/' target='_blank' style='color: {colors["accent_green"]}; text-decoration: none; font-weight: bold;'>Acessar Portal IBGE →</a>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"""
+        <div style='background-color: {colors["background"]}; padding: 1.5rem; border-radius: 10px; border-left: 5px solid {colors["accent_red"]}; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: {colors["text_main"]};'>
+            <h4 style='margin-top:0; display: flex; align-items: center;'><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: {colors["accent_red"]};">folder_open</span> Repositório GitHub</h4>
+            <p>Documentação técnica, scripts de pré-processamento e código-fonte desta plataforma de inteligência.</p>
+            <a href='https://github.com/psantiago20/Desafio_Relampago_Analytics' target='_blank' style='color: {colors["accent_red"]}; text-decoration: none; font-weight: bold;'>Ver Código Fonte →</a>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.write("")
+        
+        st.markdown(f"""
+        <div style='background-color: {colors["background"]}; padding: 1.5rem; border-radius: 10px; border-left: 5px solid {colors["primary"]}; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: {colors["text_main"]};'>
+            <h4 style='margin-top:0; display: flex; align-items: center;'><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: {colors["primary"]};">info</span> Informações Adicionais</h4>
+            <p>Os dados passam por um processo de limpeza e tratamento (Notebooks Python) antes de serem visualizados nesta interface.</p>
+            <i>Versão: 1.2.0 | Atualização: Março 2026</i>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.info("Para dúvidas metodológicas ou sugestões, por favor consulte a documentação no repositório oficial.")

@@ -164,6 +164,11 @@ def render_demografico(filtered_df, theme_key="light"):
             fig_box = px.box(filtered_df, x='regiao', y='idade_anos', color='regiao', color_discrete_sequence=px.colors.qualitative.Safe)
             st.plotly_chart(format_fig(fig_box, theme_name=theme_key), use_container_width=True)
 
+    st.markdown("---")
+    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
+    st.markdown("""
+* **Perfil Biossocial Predominante:** O perfil biossocial das gestantes HIV positivas revela uma população predominantemente parda, seguida de branca e preta, refletindo a composição étnico-racial brasileira. Em relação à escolaridade, a concentração nos níveis fundamental incompleto e médio completo acompanha o perfil educacional da população geral do país, enquanto o baixo número de gestantes com ensino superior reflete a menor proporção de brasileiras que alcançam esse nível de formação. A distribuição etária concentra-se entre 20 e 30 anos, compatível com o pico de fertilidade feminina, com queda progressiva após os 30 anos. Regionalmente, Norte e Nordeste apresentam medianas de idade mais baixas (~25 anos) e maior amplitude etária, sugerindo maior ocorrência de gestações em idades mais jovens nessas regiões, enquanto Sudeste e Sul apresentam medianas ligeiramente superiores (~28–29 anos), refletindo o padrão de postergação da maternidade típico de regiões com maior desenvolvimento socioeconômico.
+    """)
 
 
 
@@ -835,15 +840,6 @@ def render_cascata(filtered_df, theme_key="light"):
                 else:
                     st.warning("Sem dados conclusivos de acesso a TARV neste recorte.")
 
-    st.markdown("---")
-    st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
-    st.markdown("""
-* **Determinantes Sociais e Acesso à TARV:** Enquanto a adesão ao pré-natal mostrou variações modestas entre os grupos (~6%), o acesso à Terapia Antirretroviral (TARV) revelou desigualdades muito mais expressivas, com diferenças de até 20 pontos percentuais entre grupos raciais e 15 pontos entre níveis de escolaridade. Isso sugere que as barreiras de acesso ao tratamento são mais sensíveis aos determinantes sociais do que a adesão ao pré-natal em si, apontando para iniquidades estruturais no cuidado às gestantes HIV positivas no Brasil.
-* **Metas Globais de Erradicação:** O maior objetivo é que a taxa de realização de TARV atinja 95% para cumprir a meta global 95-95-95, que será alcançada quando 95% das pessoas vivendo com HIV conheçam o diagnóstico, 95% delas estejam em tratamento e 95% das tratadas alcancem supressão viral. A equalização no acesso medicamentoso é o passo crucial para esta conquista.
-    """)
-    st.markdown("---")
-
-    
     # O Plotly constrói o funil
     fig = px.funnel(
         df_cascata, 

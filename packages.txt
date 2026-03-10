@@ -1,0 +1,5 @@
+libgdal-dev
+libgeos-dev
+libproj-dev
+libxml2-dev
+libxslt1-dev

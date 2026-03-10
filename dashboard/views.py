@@ -295,7 +295,7 @@ def render_bivariada(filtered_df, theme_key="light"):
     st.markdown("### Correlações e Testes de Hipótese Clínicas")
     st.info("Testes de independência Qui-Quadrado (Chi-Squared) com significância de 5% (p < 0.05).")
     
-    st.markdown("**Relação Idade x Pré-Natal**")
+    st.markdown("**Momento de diagnóstico de HIV em gestantes**")
     df_clean = filtered_df.dropna(subset=['idade_categoria', 'momento_diagnostico'])
     df_clean = df_clean[(df_clean['idade_categoria'] != 'Ignorado') & (df_clean['momento_diagnostico'] != 'Ignorado')]
     if not df_clean.empty:
@@ -367,7 +367,7 @@ def render_bivariada(filtered_df, theme_key="light"):
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("""
-* **Diagnóstico e Planejamento Obstétrico:** A grande maioria das gestantes recebeu o diagnóstico de HIV antes do pré-natal em todas as faixas etárias (p = 0,007), sendo as jovens adultas (20–29 anos) o grupo com maior volume absoluto. Exceção relevante são as adolescentes, para quem o pré-natal funciona proporcionalmente mais como porta de entrada ao diagnóstico, reforçando seu papel estratégico nessa faixa etária. O diagnóstico prévio é condição essencial para o planejamento obstétrico adequado: gestantes acompanhadas apresentaram maior realização de cesárea eletiva, via indicada para HIV positivas com carga viral elevada ou desconhecida por reduzir o risco de transmissão vertical (BRASIL, 2022), enquanto a ausência de pré-natal associou-se a maior proporção de partos vaginais e cesáreas de urgência, evidenciando que o diagnóstico precoce e a vinculação ao pré-natal constituem intervenção direta na prevenção da transmissão vertical do HIV.
+* **Diagnóstico e Planejamento Obstétrico:** A grande maioria das gestantes recebeu o diagnóstico de HIV antes do pré-natal em todas as faixas etárias (p = 0,007), sendo as jovens adultas (20–29 anos) o grupo com maior volume absoluto. O diagnóstico prévio é condição essencial para o planejamento obstétrico adequado: gestantes acompanhadas apresentaram maior realização de cesárea eletiva, via indicada para HIV positivas com carga viral elevada ou desconhecida por reduzir o risco de transmissão vertical (BRASIL, 2022), enquanto a ausência de pré-natal associou-se a maior proporção de partos vaginais e cesáreas de urgência, evidenciando que o diagnóstico precoce e a vinculação ao pré-natal constituem intervenção direta na prevenção da transmissão vertical do HIV.
 
 **Referências:**
 * BRASIL. Ministério da Saúde. Protocolo Clínico e Diretrizes Terapêuticas para Prevenção da Transmissão Vertical do HIV, Sífilis e Hepatites Virais. Brasília: MS, 2022. Disponível em: https://bvsms.saude.gov.br/bvs/publicacoes/protocolo_clinico_hiv_sifilis_hepatites.pdf
@@ -674,7 +674,7 @@ def render_matriz(filtered_df, theme_key="light"):
 
 def render_cascata(filtered_df, theme_key="light"):
     colors = THEMES[theme_key]
-    st.markdown("### Adesão ao Pré-Natal e Cascata de Prevenção")
+    st.markdown("### Adesão ao Tratamento e Cascata de Prevenção")
     st.info("Acompanhamento longitudinal das etapas desde o diagnóstico no SINAN até o momento ideal do parto.")
     
     df = filtered_df.copy()
@@ -701,7 +701,7 @@ def render_cascata(filtered_df, theme_key="light"):
         '1. Diagnóstico', 
         '2. Pré-Natal', 
         '3. TARV na<br>Gestação', 
-        '4. ARV no<br>Parto (Ideal)'
+        '4. ARV no<br>Parto'
     ]
     
     resultados = []

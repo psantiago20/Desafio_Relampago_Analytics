@@ -58,7 +58,7 @@ t1, t2, t3, t4, t7, t5, t6, t8 = st.tabs([
     "Perfil Social", 
     "Cartografia", 
     "Correlações Clínicas",
-    "Adesão a Pré-natal",
+    "Adesão ao Tratamento",
     "Inteligência Artificial", 
     "Matriz Bruta",
     "Fontes"

@@ -878,7 +878,7 @@ def render_cascata(filtered_df, theme_key="light"):
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("""
-* **Reflexo do Sucesso Terapêutico:** A última etapa do funil (4. Dispensadas de ARV no Parto) revela a proporção de pacientes que tiveram sucesso no acompanhamento prévio (Pré-Natal + TARV) e que foram dispensadas do ARV venoso no momento do parto (cerca de 35% das pacientes). A dispensa ocorre, segundo protocolos do MS, para gestantes que chegam à reta final com carga viral indetectável graças à adesão eficaz da etapa 3.
+* **Reflexo do Sucesso Terapêutico:** A cascata de prevenção evidencia uma perda progressiva e expressiva de gestantes a cada etapa do cuidado, em todas as regiões. Embora a adesão ao pré-natal seja relativamente homogênea entre as regiões (88,0% a 92,9%), a queda se acentua drasticamente nas etapas seguintes. A última etapa do funil (4. Dispensadas de ARV no Parto) revela a proporção de pacientes que tiveram sucesso no acompanhamento prévio (Pré-Natal + TARV) e que foram dispensadas do ARV venoso no momento do parto (cerca de 35% das pacientes). A dispensa ocorre, segundo protocolos do MS, para gestantes que chegam à reta final com carga viral indetectável graças à adesão eficaz da etapa 3.
 * **Gargalos do Sistema:** Os dados evidenciam que o gargalo crítico não está no diagnóstico nem na primeira vinculação ao pré-natal, mas sim na ampliação da taxa de manutenção da Terapia Antirretroviral (TARV) ao longo dos meses da gestação, essencial para que a maioria alcance essa dispensa com segurança.
     """)
 

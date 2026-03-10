@@ -701,7 +701,7 @@ def render_cascata(filtered_df, theme_key="light"):
         '1. Diagnóstico', 
         '2. Pré-Natal', 
         '3. TARV na<br>Gestação', 
-        '4. ARV no<br>Parto'
+        '4. Dispensadas de<br>ARV no Parto'
     ]
     
     resultados = []
@@ -714,7 +714,7 @@ def render_cascata(filtered_df, theme_key="light"):
         total_gest = len(df_reg)
         fez_prenatal = len(df_reg[df_reg['pre_prenat_num'] == 1])
         prenatal_e_tarv = len(df_reg[(df_reg['pre_prenat_num'] == 1) & (df_reg['pre_antret_num'] == 1)])
-        fluxo_completo = len(df_reg[(df_reg['pre_prenat_num'] == 1) & (df_reg['pre_antret_num'] == 1) & (df_reg['par_antidu_num'] == 1)])
+        fluxo_completo = len(df_reg[(df_reg['pre_prenat_num'] == 1) & (df_reg['pre_antret_num'] == 1) & (df_reg['par_antidu_num'] != 1)])
         
         quantidades = [total_gest, fez_prenatal, prenatal_e_tarv, fluxo_completo]
         
@@ -878,8 +878,8 @@ def render_cascata(filtered_df, theme_key="light"):
     st.markdown("---")
     st.markdown('<h3 style="display: flex; align-items: center;"><span class="material-symbols-outlined" style="margin-right: 0.5rem; color: var(--primary);">tips_and_updates</span> Insights</h3>', unsafe_allow_html=True)
     st.markdown("""
-* **Falha na Manutenção Longitudinal:** A cascata de prevenção evidencia uma perda progressiva e expressiva de gestantes a cada etapa do cuidado, em todas as regiões. Embora a adesão ao pré-natal seja relativamente homogênea entre as regiões (88,0% a 92,9%), a queda se acentua drasticamente nas etapas seguintes: a cobertura de TARV na gestação varia de 55,9% no Norte a 77,4% no Sul, e a taxa de ARV no momento ideal do parto despenca para apenas 34,1% no Norte e 36,7% no Nordeste — menos de metade das gestantes diagnosticadas.
-* **Gargalos do Sistema:** Esse padrão evidencia que o gargalo crítico não está no diagnóstico nem no pré-natal, mas na manutenção do tratamento antirretroviral ao longo da gestação, especialmente nas regiões Norte e Nordeste, onde as perdas são mais severas e os desafios de acesso e continuidade do cuidado são estruturalmente maiores.
+* **Reflexo do Sucesso Terapêutico:** A última etapa do funil (4. Dispensadas de ARV no Parto) revela a proporção de pacientes que tiveram sucesso no acompanhamento prévio (Pré-Natal + TARV) e que foram dispensadas do ARV venoso no momento do parto (cerca de 35% das pacientes). A dispensa ocorre, segundo protocolos do MS, para gestantes que chegam à reta final com carga viral indetectável graças à adesão eficaz da etapa 3.
+* **Gargalos do Sistema:** Os dados evidenciam que o gargalo crítico não está no diagnóstico nem na primeira vinculação ao pré-natal, mas sim na ampliação da taxa de manutenção da Terapia Antirretroviral (TARV) ao longo dos meses da gestação, essencial para que a maioria alcance essa dispensa com segurança.
     """)
 
 def render_fontes(theme_key="light"):

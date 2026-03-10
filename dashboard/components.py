@@ -79,7 +79,9 @@ def render_kpis(filtered_df, ano_sel):
     
     lag = "N/A"
     if 'atraso_dias' in filtered_df.columns:
-        lag = f"{filtered_df['atraso_dias'].median():.0f} d"
+        df_hist_filter = filtered_df[filtered_df['atraso_dias'].between(0, 365)]
+        if not df_hist_filter.empty:
+            lag = f"{df_hist_filter['atraso_dias'].median():.0f} d"
     
     idade = "N/A"
     if 'idade_anos' in filtered_df.columns:
